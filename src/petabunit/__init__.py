@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 program_name: str = "petabunit"
 RESOURCES_DIR: Path = Path(__file__).parent / "resources"
