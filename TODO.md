@@ -1,9 +1,9 @@
 # TODO
 ## Examples
-- [ ] example core (minimal model)
-- [ ] example pk model
+- [ ] example simple chain
+- [ ] example simple pk
 - [ ] example pbpk model
-- [ ] repressilator
+- [ ] example repressilator
 
 ## SBML units
 - [~] extract and normalize units from SBML

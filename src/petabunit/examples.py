@@ -2,6 +2,11 @@
 
 from petabunit.console import console
 
+examples = [
+    "Elowitz_Nature2000/Elowitz_Nature2000.yaml",  # no units
+    "simple_chain/simple_chain.yaml",  # complete example with units
+
+]
 
 def example_Elowitz2000() -> None:
     """Run Elowitz2000 example."""

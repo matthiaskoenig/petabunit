@@ -1,0 +1,13 @@
+format_version: 1
+parameter_file: simple_chain.tsv
+problems:
+- condition_files:
+  - experimentalCondition_simple_chain.tsv
+  measurement_files:
+  - measurementData_simple_chain.tsv
+  observable_files:
+  - observables_simple_chain.tsv
+  sbml_files:
+  - model_simple_chain.xml
+  visualization_files:
+  - visualizationSpecification_simple_chain.tsv
