@@ -2,7 +2,7 @@
 import libsbml
 
 from petabunit.console import console
-from petabunit.sbmlunits import unit_statistics, unit_statistics_for_doc
+from petabunit.units import unit_statistics_for_doc, unit_statistics
 
 examples = [
     "Elowitz_Nature2000/Elowitz_Nature2000.yaml",  # no units
@@ -38,23 +38,21 @@ def print_problem(petab_problem: petab.Problem) -> None:
 
 if __name__ == "__main__":
     from petabunit import EXAMPLES_DIR
-    sbml_paths = [
-        EXAMPLES_DIR / "Elowitz_Nature2000" / "model_Elowitz_Nature2000.xml",
-        EXAMPLES_DIR / "enalapril_pbpk" / "enalapril_pbpk.xml",
-        EXAMPLES_DIR / "simple_chain" / "simple_chain.xml",
-        EXAMPLES_DIR / "simple_pk" / "simple_pk.xml",
-    ]
+
+    sbml_paths = [p for p in EXAMPLES_DIR.glob("**/*.xml")]
+    console.print(f"{sbml_paths}")
+    yaml_paths = [p for p in EXAMPLES_DIR.glob("**/*.yaml")]
+
     yaml_paths = [
-        EXAMPLES_DIR / "simple_chain" / "simple_chain.yaml",
-        # EXAMPLES_DIR / "Elowitz_Nature2000" / "Elowitz_Nature2000.yaml",
+        EXAMPLES_DIR / "baymodts_caffeine" / "caffeine_pk_Control.yaml"
     ]
-
-
     # unit statistics
-    # df = unit_statistics(sbml_paths=sbml_paths)
-    # console.rule(style="white")
-    # console.print(df)
-    # console.rule(style="white")
+    if True:
+        df = unit_statistics(sbml_paths=sbml_paths)
+        console.rule(style="white")
+        console.print(df)
+        console.rule(style="white")
+    exit()
 
     # read the PETab problems
     import petab
@@ -63,7 +61,7 @@ if __name__ == "__main__":
         console.print(problem)
         errors_exist = petab.lint.lint_problem(problem)
         console.print(f"PEtab errors: {errors_exist}")
-        print_problem(petab_problem=problem)
+        # print_problem(petab_problem=problem)
 
         # get units for SBML model
         if problem.sbml_model:

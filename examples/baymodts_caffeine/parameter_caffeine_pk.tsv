@@ -1,0 +1,7 @@
+parameterId	parameterScale	lowerBound	upperBound	estimate	nominalValue	parameter_unit
+Mr_caf	lin	0.001	100	0	194.19	g/mole
+conc_conversion	lin	0.001	100	0	1000	ng/µg
+kabs	lin	0.001	100	1	0.01	l/hr
+CL	lin	0.001	100	1	0.01	l/hr
+Q	lin	0.001	100	1	0.1	l/hr
+sd1_y_obs	lin	0.001	1000	1	1	

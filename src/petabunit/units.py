@@ -17,6 +17,7 @@ from pint import Quantity, UnitRegistry
 from pint.errors import DimensionalityError, UndefinedUnitError
 from sbmlutils.io import read_sbml
 
+import petab
 from petabunit import log
 from petabunit.console import console
 
@@ -432,6 +433,13 @@ class Units:
             return f"1/{denom_str}"
         return ""
 
+
+def units_for_petab_problem(problem: petab.Problem):
+    """Resolve all units for a given problem.
+
+    TODO: dictionary of units which are mapped on pint units for all objects.
+    """
+    pass
 
 def unit_statistics_for_doc(doc: libsbml.SBMLDocument) -> Dict[str, Any]:
     """Return unit information for given model."""
