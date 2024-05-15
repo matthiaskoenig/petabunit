@@ -17,7 +17,7 @@ from petabunit import log
 from petabunit.console import console
 
 logger = log.get_logger(__name__)
-UdictType = Dict[str, str]
+UdictType = Dict[str, Optional[str]]
 
 _sbml_uids = [
     "ampere",
@@ -64,6 +64,16 @@ def default_ureg() -> Tuple[UnitRegistry, UdictType]:
     ureg.define("item = count")
     ureg.define("percent = 0.01*count")
 
+    # add predefined units (SBML Level 2)
+    for uid, unit_str in {
+        "substance": "mole",
+        "volume": "litre",
+        "area": "meter^2",
+        "length": "meter",
+        "time": "second",
+    }.items():
+        ureg.define(f"{uid} = {unit_str}")
+
     # add SBML definitions
     for key in _sbml_uids:
         try:
@@ -79,6 +89,39 @@ ureg, sbml_uid_dict = default_ureg()
 
 class UnitsParser:
     """Parsing of PEtab unit information."""
+
+    @classmethod
+    def model_uid_dict(cls, model: libsbml.Model) -> UdictType:
+        """Populate the model uid dict for lookup."""
+
+        # map no units on dimensionless
+        uid_dict: Dict[str, str] = {**sbml_uid_dict, "": None}
+
+        udef: libsbml.UnitDefinition
+        for udef in model.getListOfUnitDefinitions():
+            uid = udef.getId()
+            unit_str = cls.udef_to_str(udef)
+            q = ureg(unit_str)
+            try:
+                # check if uid is existing unit registry definition (short name)
+                q_uid = ureg(uid)
+                if q_uid == q:
+                    unit_str = uid
+                else:
+                    # incorrect meaning
+                    logger.error(
+                        f"SBML uid interpretation of '{uid}' does not match unit "
+                        f"registry: '{uid} = {q} != {q_uid}'."
+                    )
+            except UndefinedUnitError:
+                pass
+            #     # add definition
+            #     definition = f"{uid} = {unit_str}"
+            #     ureg.define(definition)
+
+            uid_dict[uid] = unit_str
+
+        return uid_dict
 
     @classmethod
     def from_sbml_file(cls, source: Union[str, Path]) -> UdictType:
@@ -99,19 +142,16 @@ class UnitsParser:
     def from_sbml_model(cls, model: libsbml.Model) -> UdictType:
         """Get UnitsInformation for SBML Model."""
 
-        # create sid to unit mapping
+        # create uid to unit mapping
         uid_dict: UdictType = cls.model_uid_dict(model)
 
         # add additional units
-        udict: Dict[str, str] = {}
+        udict: UdictType = {}
 
         # add time unit
         time_uid: str = model.getTimeUnits()
         if time_uid:
             udict["time"] = uid_dict[time_uid]
-        if not time_uid:
-            logger.warning("No time units defined in model, falling back to 'second'.")
-            udict["time"] = "second"
 
         # get all objects in model
         if not model.isPopulatedAllElementIdList():
@@ -121,117 +161,65 @@ class UnitsParser:
         for k in range(sid_list.size()):
             sid = sid_list.at(k)
             element: libsbml.SBase = model.getElementBySId(sid)
-            if element:
-                # in case of reactions we have to derive units from the kinetic law
-                if isinstance(element, libsbml.Reaction):
-                    if element.isSetKineticLaw():
-                        element = element.getKineticLaw()
-                    else:
-                        continue
+            if not element:
+                continue
 
-                # for species the amount and concentration units have to be added
-                if isinstance(element, libsbml.Species):
-                    # amount units
-                    substance_uid = element.getSubstanceUnits()
-                    # udict[sid] = uid_dict[substance_uid]
-                    udict[sid] = substance_uid
-
-                    compartment: libsbml.Compartment = model.getCompartment(
-                        element.getCompartment()
-                    )
-                    volume_uid = compartment.getUnits()
-
-                    # store concentration
-                    if substance_uid and volume_uid:
-                        udict[f"[{sid}]"] = f"{substance_uid}/{volume_uid}"
-                    else:
-                        logger.warning(
-                            f"Substance or volume unit missing, "
-                            f"cannot determine concentration "
-                            f"unit for '[{sid}]')"
-                        )
-                        udict[f"[{sid}]"] = ""
-
-                elif isinstance(element, (libsbml.Compartment, libsbml.Parameter)):
-                    # udict[sid] = uid_dict[element.getUnits()]
-                    udict[sid] = element.getUnits()
+            # in case of reactions we have to derive units from the kinetic law
+            if isinstance(element, libsbml.Reaction):
+                if element.isSetKineticLaw():
+                    element = element.getKineticLaw()
                 else:
-                    udef: libsbml.UnitDefinition = element.getDerivedUnitDefinition()
-                    if udef is None:
-                        continue
+                    udict[sid] = None
+                    continue
 
-                    # find the correct unit definition
-                    uid: Optional[str] = None
-                    udef_test: libsbml.UnitDefinition
-                    for udef_test in model.getListOfUnitDefinitions():
-                        if libsbml.UnitDefinition.areIdentical(udef_test, udef):
-                            uid = udef_test.getId()
-                            break
+            # for species check if amount or concentration
+            if isinstance(element, libsbml.Species):
+                species: libsbml.Species = element
+                substance_uid = species.getSubstanceUnits()
 
-                    if uid:
-                        # udict[sid] = uid_dict[uid]
-                        udict[sid] = uid
+                if substance_uid:
+                    if species.getHasOnlySubstanceUnits():
+                        # store amount
+                        udict[sid] = uid_dict[substance_uid]
                     else:
-                        logger.warning(
-                            f"DerivedUnit not in UnitDefinitions: "
-                            f"'{cls.udef_to_str(udef)}'"
+                        # store concentration
+                        compartment: libsbml.Compartment = model.getCompartment(
+                            element.getCompartment()
                         )
-                        udict[sid] = cls.udef_to_str(udef)
+                        volume_uid = compartment.getUnits()
+                        if substance_uid and volume_uid:
+                            udict[sid] = f"({uid_dict[substance_uid]})/({uid_dict[volume_uid]})"
+                        else:
+                            logger.debug(f"volume unit missing for concentration: '{sid}'")
+                            udict[sid] = None
 
-            else:
-                # check if sid is a unit
-                udef = model.getUnitDefinition(sid)
-                if udef is None:
-                    # elements in packages
-                    logger.debug(f"No element found for id '{sid}'")
+            if isinstance(element, (libsbml.Compartment, libsbml.Parameter)):
+                udict[sid] = uid_dict[element.getUnits()]
+
+            # else:
+            #     udef: libsbml.UnitDefinition = element.getDerivedUnitDefinition()
+            #     if udef is None:
+            #         continue
+            #
+            #     # find the correct unit definition
+            #     uid: Optional[str] = None
+            #     udef_test: libsbml.UnitDefinition
+            #     for udef_test in model.getListOfUnitDefinitions():
+            #         if libsbml.UnitDefinition.areIdentical(udef_test, udef):
+            #             uid = udef_test.getId()
+            #             break
+            #
+            #     if uid:
+            #         udict[sid] = uid_dict[uid]
+            #     else:
+            #         logger.warning(
+            #             f"DerivedUnit not in UnitDefinitions: "
+            #             f"'{cls.udef_to_str(udef)}'"
+            #         )
+            #         udict[sid] = cls.udef_to_str(udef)
 
         return udict
 
-    @classmethod
-    def model_uid_dict(cls, model: libsbml.Model) -> Dict[str, str]:
-        """Populate the model uid dict for lookup."""
-
-        uid_dict: Dict[str, str] = {**sbml_uid_dict}
-
-        # map no units on dimensionless
-        uid_dict[""] = "dimensionless"
-
-        # add predefined units (SBML Level 2)
-        for uid, unit_str in {
-            "substance": "mole",
-            "volume": "litre",
-            "area": "meter^2",
-            "length": "meter",
-            "time": "second",
-        }.items():
-            ureg.define(f"{uid} = {unit_str}")
-
-        udef: libsbml.UnitDefinition
-        for udef in model.getListOfUnitDefinitions():
-            uid = udef.getId()
-            unit_str = cls.udef_to_str(udef)
-            q = ureg(unit_str)
-            try:
-                # check if uid is existing unit registry definition (short name)
-                q_uid = ureg(uid)
-
-                # check if identical
-                if q_uid != q:
-                    logger.debug(
-                        f"SBML uid interpretation of '{uid}' does not match unit "
-                        f"registry: '{uid} = {q} != {q_uid}'."
-                    )
-                else:
-                    unit_str = uid
-
-            except UndefinedUnitError:
-                definition = f"{uid} = {unit_str}"
-                ureg.define(definition)
-
-            logger.debug(f"{uid} = {unit_str} ({q})")
-            uid_dict[uid] = unit_str
-
-        return uid_dict
 
     # abbreviation dictionary for string representation
     _units_abbreviation = {
