@@ -433,25 +433,23 @@ class Units:
         return ""
 
 
-def unit_statistics_for_model(sbml_path: Path) -> Dict[str, Any]:
+def unit_statistics_for_doc(doc: libsbml.SBMLDocument) -> Dict[str, Any]:
     """Return unit information for given model."""
-    if not sbml_path.exists():
-        logger.error(f"SBML does not exist: '{sbml_path}'")
+
     ureg = UnitRegistry()
-    uinfo = UnitsInformation.from_sbml(sbml_path, ureg=ureg)
+    uinfo = UnitsInformation.from_sbml_doc(doc, ureg=ureg)
     udict = uinfo.udict
     # console.log(udict)
 
-    doc: libsbml.SBMLDocument = sbmlutils.io.read_sbml(sbml_path)
     model: libsbml.Model = doc.getModel()
 
     info: Dict[str, Any] = {
-        "filename": sbml_path.stem,
         "model_id": model.getId(),
         "n_objects": len(udict),
         "n_units": len([k for k, v in udict.items() if v]),
     }
     info["f_units"] = info["n_units"] / info["n_objects"]
+    info["units"] = {k: v for k, v in udict.items() if v}
 
     return info
 
@@ -460,25 +458,29 @@ def unit_statistics(sbml_paths: Iterable[Path]) -> pd.DataFrame:
     """Create pandas data frame with unit information for models."""
     infos = []
     for p in sbml_paths:
-        info = unit_statistics_for_model(p)
+        if not p.exists():
+            logger.error(f"SBML does not exist: '{p}'")
+
+        doc: libsbml.SBMLDocument = sbmlutils.io.read_sbml(source=p)
+        info = unit_statistics_for_doc(doc=doc)
         infos.append(info)
 
     return pd.DataFrame(infos)
 
 
 if __name__ == "__main__":
-    pass
-    # from petabunit import EXAMPLES_DIR
-    # sbml_paths = [
-    #     EXAMPLES_DIR / "Elowitz_Nature2000" / "model_Elowitz_Nature2000.xml",
-    #     EXAMPLES_DIR / "enalapril_pbpk" / "enalapril_pbpk.xml",
-    #     EXAMPLES_DIR / "simple_chain" / "simple_chain.xml",
-    #     EXAMPLES_DIR / "simple_pk" / "simple_pk.xml",
-    # ]
-    # df = unit_statistics(sbml_paths=sbml_paths)
-    # console.rule(style="white")
-    # console.print(df)
-    # console.rule(style="white")
+
+    from petabunit import EXAMPLES_DIR
+    sbml_paths = [
+        EXAMPLES_DIR / "Elowitz_Nature2000" / "model_Elowitz_Nature2000.xml",
+        EXAMPLES_DIR / "enalapril_pbpk" / "enalapril_pbpk.xml",
+        EXAMPLES_DIR / "simple_chain" / "simple_chain.xml",
+        EXAMPLES_DIR / "simple_pk" / "simple_pk.xml",
+    ]
+    df = unit_statistics(sbml_paths=sbml_paths)
+    console.rule(style="white")
+    console.print(df)
+    console.rule(style="white")
 
     # import libsbml
     #

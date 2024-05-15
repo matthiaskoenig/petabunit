@@ -1,7 +1,8 @@
 """Example of unit checking and conversion."""
+import libsbml
 
 from petabunit.console import console
-from petabunit.sbmlunits import unit_statistics
+from petabunit.sbmlunits import unit_statistics, unit_statistics_for_doc
 
 examples = [
     "Elowitz_Nature2000/Elowitz_Nature2000.yaml",  # no units
@@ -14,6 +15,27 @@ def example_Elowitz2000() -> None:
     console.rule("Elowitz2000", style="white")
 
 
+import petab
+def print_problem(petab_problem: petab.Problem) -> None:
+
+    console.rule("parameters", style="white")
+    console.print(petab_problem.parameter_df)
+
+    # Check the observable dataframe
+    console.rule("observables", style="white")
+    console.print(petab_problem.observable_df)
+
+    # Check the measurement dataframe
+    console.rule("measurements", style="white")
+    console.print(petab_problem.measurement_df)
+
+    # check the condition dataframe
+    console.rule("conditions", style="white")
+    console.print(petab_problem.condition_df)
+
+    # change things in the model
+    console.rule(style="white")
+
 if __name__ == "__main__":
     from petabunit import EXAMPLES_DIR
     sbml_paths = [
@@ -23,8 +45,8 @@ if __name__ == "__main__":
         EXAMPLES_DIR / "simple_pk" / "simple_pk.xml",
     ]
     yaml_paths = [
-        EXAMPLES_DIR / "Elowitz_Nature2000" / "Elowitz_Nature2000.yaml",
         EXAMPLES_DIR / "simple_chain" / "simple_chain.yaml",
+        # EXAMPLES_DIR / "Elowitz_Nature2000" / "Elowitz_Nature2000.yaml",
     ]
 
 
@@ -36,9 +58,20 @@ if __name__ == "__main__":
 
     # read the PETab problems
     import petab
-    yaml_path = yaml_paths[1]
-    problem: petab.Problem = petab.Problem.from_yaml(yaml_path)
-    console.print(problem)
-    errors_exist = petab.lint.lint_problem(problem)
-    console.print(f"PEtab errors: {errors_exist}")
+    for yaml_path in yaml_paths:
+        problem: petab.Problem = petab.Problem.from_yaml(yaml_path)
+        console.print(problem)
+        errors_exist = petab.lint.lint_problem(problem)
+        console.print(f"PEtab errors: {errors_exist}")
+        print_problem(petab_problem=problem)
+
+        # get units for SBML model
+        if problem.sbml_model:
+            model: libsbml.Model = problem.sbml_model
+            doc: libsbml.SBMLDocument = model.getSBMLDocument()
+            info = unit_statistics_for_doc(doc=doc)
+            console.print(info)
+            # TODO do the conversion to proper units
+
+
 
