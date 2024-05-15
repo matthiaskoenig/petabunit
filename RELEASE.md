@@ -10,7 +10,10 @@
 * test installation in virtualenv from pypi
 ```
 mkvirtualenv petabunit-test --python=python3.12
-(petabunit-test) pip install pymetadata
+(petabunit-test) pip install petabunit
+pip list | grep petabunit
+deactive petabunit-test
+rmvirtualenv petabunit-test
 ```
 
 

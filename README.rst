@@ -26,8 +26,8 @@ petabunit - Unit annotations in PEtab
    :target: http://mypy-lang.org/
    :alt: mypy
 
-Aim: Provide a means to annotate measurements and observables with units, to facilitate re-use, consistency checks, and automated unit conversion.
-Proposal: https://docs.google.com/document/d/1shFaFmykaXUxZqCGNFkRoS5WBPgP5yclWQ7bh9St3N0/edit
+- **Aim**: Provide a means to annotate measurements and observables with units, to facilitate re-use, consistency checks, and automated unit conversion.
+- **Proposal**: https://docs.google.com/document/d/1shFaFmykaXUxZqCGNFkRoS5WBPgP5yclWQ7bh9St3N0/edit
 
 License
 =======
