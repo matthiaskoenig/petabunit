@@ -22,7 +22,23 @@ if __name__ == "__main__":
         EXAMPLES_DIR / "simple_chain" / "simple_chain.xml",
         EXAMPLES_DIR / "simple_pk" / "simple_pk.xml",
     ]
-    df = unit_statistics(sbml_paths=sbml_paths)
-    console.rule(style="white")
-    console.print(df)
-    console.rule(style="white")
+    yaml_paths = [
+        EXAMPLES_DIR / "Elowitz_Nature2000" / "Elowitz_Nature2000.yaml",
+        EXAMPLES_DIR / "simple_chain" / "simple_chain.yaml",
+    ]
+
+
+    # unit statistics
+    # df = unit_statistics(sbml_paths=sbml_paths)
+    # console.rule(style="white")
+    # console.print(df)
+    # console.rule(style="white")
+
+    # read the PETab problems
+    import petab
+    yaml_path = yaml_paths[1]
+    problem: petab.Problem = petab.Problem.from_yaml(yaml_path)
+    console.print(problem)
+    errors_exist = petab.lint.lint_problem(problem)
+    console.print(f"PEtab errors: {errors_exist}")
+

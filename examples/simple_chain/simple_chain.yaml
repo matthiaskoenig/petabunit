@@ -1,5 +1,5 @@
 format_version: 1
-parameter_file: simple_chain.tsv
+parameter_file: parameters_simple_chain.tsv
 problems:
 - condition_files:
   - experimentalCondition_simple_chain.tsv
@@ -8,6 +8,4 @@ problems:
   observable_files:
   - observables_simple_chain.tsv
   sbml_files:
-  - model_simple_chain.xml
-  visualization_files:
-  - visualizationSpecification_simple_chain.tsv
+  - simple_chain.xml
