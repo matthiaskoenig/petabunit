@@ -2,17 +2,23 @@
 
 Used for model and data unit conversions.
 """
+
 import os
 from collections.abc import MutableMapping
-from petabunit.console import console
 from pathlib import Path
-from typing import Dict, Iterator, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 import libsbml
 import numpy as np
+import pandas as pd
+import pint
+import sbmlutils.io
+from pint import Quantity, UnitRegistry
+from pint.errors import DimensionalityError, UndefinedUnitError
+from sbmlutils.io import read_sbml
+
 from petabunit import log
 from petabunit.console import console
-from sbmlutils.io import read_sbml
 
 
 # Disable Pint's old fallback behavior (must come before importing Pint)
@@ -21,11 +27,6 @@ from sbmlutils.io import read_sbml
 # with warnings.catch_warnings():
 #     warnings.simplefilter("ignore")
 #     Quantity([])
-
-import pint
-from pint import Quantity, UnitRegistry
-from pint.errors import DimensionalityError, UndefinedUnitError
-
 
 
 logger = log.get_logger(__name__)
@@ -38,7 +39,7 @@ class UnitsInformation(MutableMapping):
     Used for models or datasets.
     """
 
-    def __init__(self, udict: UdictType, ureg: UnitRegistry, *args, **kwargs):
+    def __init__(self, udict: UdictType, ureg: UnitRegistry, *args: str, **kwargs: str):
         """Initialize UnitsInformation.
 
         Behaves like a dict which allows to lookup units by id.
@@ -55,7 +56,7 @@ class UnitsInformation(MutableMapping):
         """Set item."""
         self.udict[self._keytransform(key)] = value
 
-    def __delitem__(self, key) -> None:
+    def __delitem__(self, key: str) -> None:
         """Delete item."""
         del self.udict[self._keytransform(key)]
 
@@ -77,7 +78,7 @@ class UnitsInformation(MutableMapping):
         return "\n".join(items)
 
     @property
-    def Q_(self):
+    def Q_(self) -> pint.Quantity:
         """Get quantity for generating quantities."""
         return self.ureg.Quantity
 
@@ -432,23 +433,59 @@ class Units:
         return ""
 
 
-if __name__ == "__main__":
-    from sbmlsim.test import MODEL_DEMO, MODEL_GLCWB
-
-
-    model_path = MODEL_DEMO
+def unit_statistics_for_model(sbml_path: Path) -> Dict[str, Any]:
+    """Return unit information for given model."""
+    assert sbml_path.exists()
     ureg = UnitRegistry()
-    uinfo = UnitsInformation.from_sbml(model_path, ureg=ureg)
-    console.log(uinfo.udict)
+    uinfo = UnitsInformation.from_sbml(sbml_path, ureg=ureg)
+    udict = uinfo.udict
+    console.log(udict)
 
-    import libsbml
+    doc: libsbml.SBMLDocument = sbmlutils.io.read_sbml(sbml_path)
+    model: libsbml.Model = doc.getModel()
 
-    from sbmlutils.factory import UnitDefinition
-    from sbmlutils.report.units import udef_to_string
+    info: Dict[str, Any] = {
+        "filename": sbml_path.stem,
+        "model_id": model.getId(),
+        "n_objects": len(udict),
+        "n_units": len([k for k, v in udict.items() if v]),
+    }
+    info["f_units"] = info["n_units"] / info["n_objects"]
+
+    return info
 
 
-    doc: libsbml.SBMLDocument = libsbml.SBMLDocument()
-    model: libsbml.Model = doc.createModel()
+def unit_statisics(sbml_paths: Iterable[Path]) -> pd.DataFrame:
+    """Create pandas data frame with unit information for models."""
+    infos = []
+    for p in sbml_paths:
+        info = unit_statistics_for_model(p)
+        infos.append(info)
+
+    return pd.DataFrame(infos)
+
+
+if __name__ == "__main__":
+    from petabunit import BASE_DIR
+
+    examples_dir = BASE_DIR / "examples"
+    sbml_paths = [
+        examples_dir / "simple_chain" / "simple_chain.xml",
+        examples_dir / "simple_pk" / "simple_pk.xml",
+    ]
+    df = unit_statisics(sbml_paths=sbml_paths)
+    console.rule(style="white")
+    console.print(df)
+    console.rule(style="white")
+
+    # import libsbml
+    #
+    # from sbmlutils.factory import UnitDefinition
+    # from sbmlutils.report.units import udef_to_string
+    #
+    #
+    # doc: libsbml.SBMLDocument = libsbml.SBMLDocument()
+    # model: libsbml.Model = doc.createModel()
 
     # example definitions
 

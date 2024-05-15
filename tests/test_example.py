@@ -1,8 +1,8 @@
 """Tests for examples."""
 
-from petabunit import example
+from petabunit import examples
 
 
 def test_example() -> None:
     """Test example."""
-    example.example()
+    examples.example_Elowitz2000()
