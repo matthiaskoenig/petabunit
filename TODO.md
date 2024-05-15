@@ -1,15 +1,18 @@
 # TODO
 ## Examples
-- [ ] example simple chain
+- [x] example simple chain
 - [ ] example simple pk
 - [ ] example pbpk model
 - [ ] example repressilator
 
 ## SBML units
-- [~] extract and normalize units from SBML
+- [x] extract and normalize units from SBML
 
 ## PETab units
 - [ ] extract and normalize units from PeTab
+
+## match units
+- [ ] matching units to model
 
 ## petabunit report
 - [ ] `warning` about non-existing units
@@ -23,3 +26,7 @@
 ## tool for running the conversion
 - [ ] command
 - [ ] webservice
+
+# Issues:
+- how to encode the units for conditions (bad format of the multiple columns)?
+- how to name the parameter units `Parameter_unit`

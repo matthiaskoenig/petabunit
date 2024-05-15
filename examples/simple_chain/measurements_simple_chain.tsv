@@ -1,0 +1,23 @@
+observableId	preequilibrationConditionId	simulationConditionId	measurement	measurement_unit	time	time_unit	observableParameters	noiseParameters
+S1_observable		model1_data1	1.0471435163732492	mmole/l	0.0	second		
+S2_observable		model1_data1	0.09919460223426779	mmole/l	0.0	second		
+S1_observable		model1_data1	0.48743264758588567	mmole/l	0.5	second		
+S2_observable		model1_data1	0.4888021957547106	mmole/l	0.5	second		
+S1_observable		model1_data1	0.5111484313937904	mmole/l	1.0	second		
+S2_observable		model1_data1	0.429996783429322	mmole/l	1.0	second		
+S1_observable		model1_data1	0.19186343337230125	mmole/l	1.5	second		
+S2_observable		model1_data1	0.7434636404377175	mmole/l	1.5	second		
+S1_observable		model1_data1	0.0632759033872539	mmole/l	2.0	second		
+S2_observable		model1_data1	0.8648770597445935	mmole/l	2.0	second		
+S1_observable		model1_data1	0.17080131250964803	mmole/l	2.5	second		
+S2_observable		model1_data1	0.958460322678145	mmole/l	2.5	second		
+S1_observable		model1_data1	0.13574602717751644	mmole/l	3.0	second		
+S2_observable		model1_data1	0.9791220082922286	mmole/l	3.0	second		
+S1_observable		model1_data1	-0.03345489905023776	mmole/l	3.5	second		
+S2_observable		model1_data1	1.1019183678214413	mmole/l	3.5	second		
+S1_observable		model1_data1	0.019885370806919357	mmole/l	4.0	second		
+S2_observable		model1_data1	0.8269937110815995	mmole/l	4.0	second		
+S1_observable		model1_data1	-0.21315936285025222	mmole/l	4.5	second		
+S2_observable		model1_data1	0.9686262349687932	mmole/l	4.5	second		
+S1_observable		model1_data1	0.12174161894250074	mmole/l	5.0	second		
+S2_observable		model1_data1	0.9276650191155874	mmole/l	5.0	second		

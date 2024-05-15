@@ -49,7 +49,9 @@ def create_petab_example(model_path: Path):
             "preequilibrationConditionId": None,
             "simulationConditionId": "model1_data1",
             "measurement": 	row["S1_data"],
+            "measurement_unit": "mmole/l",
             "time": row["time"],
+            "time_unit": "second",
             "observableParameters": None,
             "noiseParameters": None,
         })
@@ -58,12 +60,14 @@ def create_petab_example(model_path: Path):
             "preequilibrationConditionId": None,
             "simulationConditionId": "model1_data1",
             "measurement": 	row["S2_data"],
+            "measurement_unit": "mmole/l",
             "time": row["time"],
+            "time_unit": "second",
             "observableParameters": None,
             "noiseParameters": None,
         })
     measurement_df = pd.DataFrame(data)
-    measurement_df.to_csv(model_path.parent / "measurementData_simple_chain.tsv", sep="\t", index=False)
+    measurement_df.to_csv(model_path.parent / "measurements_simple_chain.tsv", sep="\t", index=False)
 
 
 
