@@ -1,2 +1,2 @@
-conditionId	conditionName	S1	S2
-model1_data1	""	1.0	0
+conditionId	conditionName	S1	S1Unit	S2	S2Unit
+model1_data1		1	mole/m^3	0	mole/m^3

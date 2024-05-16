@@ -1,35 +1,22 @@
-"""Working with units in petab problem."""
+"""Working with units in SBML models."""
 
 from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import libsbml
 import numpy as np
 import pandas as pd
 import pint
+from pint import UnitRegistry
+from pint.errors import UndefinedUnitError
 import sbmlutils.io
-from pint import Quantity, UnitRegistry
-from pint.errors import DimensionalityError, UndefinedUnitError
-from sbmlutils.io import read_sbml
 
-import petab
 from petabunit import log
 from petabunit.console import console
 
+
 logger = log.get_logger(__name__)
 UdictType = Dict[str, Optional[str]]
-
-
-class PEtabUnitParser:
-    """Parser for PEtab unit information."""
-
-    @staticmethod
-    def units_for_petab_problem(problem: petab.Problem):
-        """Resolve all units for a given problem.
-
-        TODO: dictionary of units which are mapped on pint units for all objects.
-        """
-        pass
 
 
 class SBMLUnitParser:
@@ -89,7 +76,6 @@ class SBMLUnitParser:
 
         return ureg
 
-
     @classmethod
     def model_uid_dict(cls, model: libsbml.Model, ureg: UnitRegistry) -> UdictType:
         """Populate the model uid dict for lookup."""
@@ -108,7 +94,7 @@ class SBMLUnitParser:
                     ureg.define(f"{uid} = {unit_str}")
 
         def q_are_equivalent(q1: pint.Quantity, q2: pint.Quantity):
-            ratio = (q1/q2).to_base_units()
+            ratio = (q1 / q2).to_base_units()
             return ratio.dimensionless and np.isclose(ratio.magnitude, 1)
 
         udef: libsbml.UnitDefinition
@@ -154,7 +140,6 @@ class SBMLUnitParser:
         if not model:
             ValueError(f"No model found in SBMLDocument: {doc}")
         return cls.from_sbml_model(model)
-
 
     @classmethod
     def from_sbml_model(cls, model: libsbml.Model) -> Tuple[UdictType, UnitRegistry]:
@@ -207,9 +192,13 @@ class SBMLUnitParser:
                         )
                         volume_uid = compartment.getUnits()
                         if substance_uid and volume_uid:
-                            udict[sid] = f"({uid_dict[substance_uid]})/({uid_dict[volume_uid]})"
+                            udict[sid] = (
+                                f"({uid_dict[substance_uid]})/({uid_dict[volume_uid]})"
+                            )
                         else:
-                            logger.debug(f"volume unit missing for concentration: '{sid}'")
+                            logger.debug(
+                                f"volume unit missing for concentration: '{sid}'"
+                            )
                             udict[sid] = None
 
             if isinstance(element, (libsbml.Compartment, libsbml.Parameter)):
@@ -305,11 +294,11 @@ class SBMLUnitParser:
 
         info: Dict[str, Any] = {
             "model_id": model.getId(),
-            "n_objects": len(udict),
-            "n_units": len(udict_pint)
+            "objects": len(udict),
+            "units": len(udict_pint),
         }
-        info["f_units"] = info["n_units"] / info["n_objects"]
-        info["units"] = udict_pint
+        info["f_units"] = info["units"] / info["objects"]
+        info["udefs"] = udict_pint
 
         return info
 
@@ -321,23 +310,10 @@ class SBMLUnitParser:
             if not p.exists():
                 logger.error(f"SBML does not exist: '{p}'")
 
-            doc: libsbml.SBMLDocument = sbmlutils.io.read_sbml(source=p)
+            doc: libsbml.SBMLDocument = sbmlutils.io.read_sbml(p)
             info = cls.unit_statistics_for_doc(doc=doc)
             infos.append(info)
 
-        return pd.DataFrame(infos)
-
-
-if __name__ == "__main__":
-    from petabunit import EXAMPLES_DIR
-    sbml_paths_examples: List[Path] = sorted([p for p in EXAMPLES_DIR.glob("**/*.xml")])
-    BENCHMARK_DIR = Path("/home/mkoenig/git/Benchmark-Models-PEtab/Benchmark-Models")
-    sbml_paths_benchmarks: List[Path] = sorted([p for p in BENCHMARK_DIR.glob("**/*.xml")])
-
-    sbml_paths = [p for p in sbml_paths_examples + sbml_paths_benchmarks]
-
-    df = SBMLUnitParser.unit_statistics(sbml_paths=sbml_paths)
-    console.rule(style="white")
-    console.print(df)
-    console.rule(style="white")
-
+        df = pd.DataFrame(infos)
+        df.sort_values(by=["f_units", "objects"], ascending=[False, True], inplace=True)
+        return df

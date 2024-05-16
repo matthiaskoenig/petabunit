@@ -6,6 +6,7 @@ import numpy as np
 
 from petabunit import EXAMPLES_DIR
 from petabunit.console import console
+from petabunit.petabunits import MEASUREMENT_TIME_UNIT_COLUMN, MEASUREMENT_UNIT_COLUMN
 
 
 def example_simulation(model_path: Path) -> pd.DataFrame:
@@ -49,9 +50,9 @@ def create_petab_example(model_path: Path):
             "preequilibrationConditionId": None,
             "simulationConditionId": "model1_data1",
             "measurement": 	row["S1_data"],
-            "measurement_unit": "mmole/l",
+            MEASUREMENT_UNIT_COLUMN: "mmole/l",
             "time": row["time"],
-            "time_unit": "second",
+            MEASUREMENT_TIME_UNIT_COLUMN: "second",
             "observableParameters": None,
             "noiseParameters": None,
         })
@@ -60,15 +61,14 @@ def create_petab_example(model_path: Path):
             "preequilibrationConditionId": None,
             "simulationConditionId": "model1_data1",
             "measurement": 	row["S2_data"],
-            "measurement_unit": "mmole/l",
+            MEASUREMENT_UNIT_COLUMN: "mmole/l",
             "time": row["time"],
-            "time_unit": "second",
+            MEASUREMENT_TIME_UNIT_COLUMN: "second",
             "observableParameters": None,
             "noiseParameters": None,
         })
     measurement_df = pd.DataFrame(data)
     measurement_df.to_csv(model_path.parent / "measurements_simple_chain.tsv", sep="\t", index=False)
-
 
 
 if __name__ == "__main__":

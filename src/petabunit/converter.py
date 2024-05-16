@@ -1,7 +1,9 @@
 """Functionality for converting units."""
 
+
 class PEtabUnitConverter:
     """Converter for units in PETab."""
+
     pass
     # @staticmethod
     # def normalize_changes(

@@ -1,4 +1,4 @@
-observableId	preequilibrationConditionId	simulationConditionId	measurement	measurement_unit	time	time_unit	observableParameters	noiseParameters
+observableId	preequilibrationConditionId	simulationConditionId	measurement	measurementUnit	time	timeUnit	observableParameters	noiseParameters
 S1_observable		model1_data1	1.0471435163732492	mmole/l	0.0	second		
 S2_observable		model1_data1	0.09919460223426779	mmole/l	0.0	second		
 S1_observable		model1_data1	0.48743264758588567	mmole/l	0.5	second		
