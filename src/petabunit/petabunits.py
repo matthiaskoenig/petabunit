@@ -27,9 +27,6 @@ class PEtabUnitParser:
         self.measurement_units: Dict[str, str] = {}
         self.condition_units: Dict[str, str] = {}
 
-        self.petab_units()
-
-
     def petab_units(self):
         """Resolve all units for a given problem."""
 
@@ -40,38 +37,50 @@ class PEtabUnitParser:
             for oid, row in df.iterrows():
                 units[oid] = row[PARAMETER_UNIT_COLUMN]
         self.parameter_units = units
-        console.rule("parameters", style="white")
-        console.print(df)
         console.print(f"{self.parameter_units=}")
 
         # observable
         df = self.problem.observable_df
         units = {}
+        observable2formula = {}
         if OBSERVABLE_UNIT_COLUMN in df.columns:
-            for _, row in df.iterrows():
-                units[row["observableFormula"]] = row[OBSERVABLE_UNIT_COLUMN]
+            for oid, row in df.iterrows():
+                formula = row["observableFormula"]
+                observable2formula[oid] = formula
+                units[formula] = row[OBSERVABLE_UNIT_COLUMN]
+
+        console.print(f"{observable2formula=}")
         self.observable_units = units
-        console.rule("observables", style="white")
-        console.print(df)
         console.print(f"{self.observable_units=}")
 
-        # Check the measurement dataframe
+        # measurement
         df = self.problem.measurement_df
         units = {}
         if MEASUREMENT_UNIT_COLUMN in df.columns:
-            for _, row in df.iterrows():
-                # get the observableName
-                problem.observable_df[]
+            console.print(df.observableId.unique())
+            for observable_id in df.observableId.unique():
+                formula = observable2formula[oid]
+                print(observable_id, formula)
+                df_observable = df[df.observableId == observable_id]
+                units[formula] = list(df_observable[MEASUREMENT_UNIT_COLUMN].unique())
 
-                units[row["observableFormula"]] = row[OBSERVABLE_UNIT_COLUMN]
-        self.observable_units = units
-        console.rule("observables", style="white")
-        console.print(df)
-        console.print(f"{self.observable_units=}")
+        if MEASUREMENT_TIME_UNIT_COLUMN in df.columns:
+            units["time"] = list(df_observable[MEASUREMENT_TIME_UNIT_COLUMN].unique())
+
+        self.measurement_units = units
+        console.print(f"{self.measurement_units=}")
 
         # check the condition dataframe
         console.rule("conditions", style="white")
-        console.print(problem.condition_df)
+        df = self.problem.parameter_df
+        units = {}
+        if PARAMETER_UNIT_COLUMN in df.columns:
+            for oid, row in df.iterrows():
+                units[oid] = row[PARAMETER_UNIT_COLUMN]
+        self.parameter_units = units
+        console.rule("parameters", style="white")
+        console.print(df)
+        console.print(f"{self.parameter_units=}")
 
 
     @staticmethod
@@ -108,7 +117,8 @@ if __name__ == "__main__":
         console.print(f"PEtab errors: {errors_exist}")
 
         petab_uparser = PEtabUnitParser(problem)
-        # PEtabUnitParser.print_problem(problem)
+        PEtabUnitParser.print_problem(problem)
+        petab_uparser.petab_units()
 
 
 
