@@ -1,0 +1,2 @@
+parameterId	parameterName	parameterScale	lowerBound	upperBound	nominalValue	estimate	parameterUnit
+k	k	log10	0.00001	1000	1	1	l/min
