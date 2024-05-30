@@ -48,6 +48,7 @@ def example_simulation(model_path: Path, fig_folder: Path, **kwargs) -> pd.DataF
     ax.set_ylabel("concentration")
 
     plt.savefig(str(fig_path) + '/00_simulation.png')
+    plt.show()
 
     return df
 
