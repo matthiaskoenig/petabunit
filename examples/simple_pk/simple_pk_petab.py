@@ -13,7 +13,7 @@ from petabunit.petabunits import MEASUREMENT_TIME_UNIT_COLUMN, MEASUREMENT_UNIT_
 def example_simulation(model_path: Path, fig_folder: Path, **kwargs) -> pd.DataFrame:
     np.random.seed(1234)
     r: roadrunner.RoadRunner = roadrunner.RoadRunner(str(model_path))
-    print(f"True k: {r.getValue('k')}, True CL: {r.getValue('CL')}")
+    print(f"True k: {r.getValue('kabs')}, True CL: {r.getValue('CL')}")
     sim = r.simulate(start=0, end=20, steps=100, **kwargs)
     df = pd.DataFrame(sim, columns=sim.colnames)
 
