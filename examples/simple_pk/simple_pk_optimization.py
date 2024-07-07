@@ -86,19 +86,19 @@ console.rule("Parameter_hist", style="white")
 pypesto.visualize.optimization_scatter(result)
 plt.savefig(str(fig_path) + '/04_opt_scatter.png')
 
-console.rule("Profile", style="white")
-result = pypesto.profile.parameter_profile(
-    problem=problem,
-    result=result,
-    optimizer=optimizer,
-    engine=engine,
-    # profile_index=[0, 1],
-)
+# console.rule("Profile Likelihood", style="white")
+# result = pypesto.profile.parameter_profile(
+#     problem=problem,
+#     result=result,
+#     optimizer=optimizer,
+#     engine=engine,
+#     # profile_index=[0, 1],
+# )
+#
+# pypesto.visualize.profiles(result)
+# plt.savefig(str(fig_path) + '/05_profiles.png')
 
-pypesto.visualize.profiles(result)
-plt.savefig(str(fig_path) + '/05_profiles.png')
-
-console.rule("Sampler", style="white")
+console.rule("Bayesian Sampler", style="white")
 sampler = pypesto.sample.AdaptiveMetropolisSampler()
 result = pypesto.sample.sample(
     problem=problem,
