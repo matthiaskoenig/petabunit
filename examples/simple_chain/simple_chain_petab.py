@@ -1,3 +1,11 @@
+# import os
+# try:
+#     user_paths = os.environ['PYTHONPATH'].split(os.pathsep)
+# except KeyError:
+#     user_paths = []
+#
+# print(user_paths)
+# exit()
 from pathlib import Path
 from matplotlib import pyplot as plt
 import roadrunner
@@ -7,6 +15,29 @@ import numpy as np
 from petabunit import EXAMPLES_DIR
 from petabunit.console import console
 from petabunit.petabunits import MEASUREMENT_TIME_UNIT_COLUMN, MEASUREMENT_UNIT_COLUMN
+
+# PARAMETER_UNIT_COLUMN = "parameterUnit"
+# OBSERVABLE_UNIT_COLUMN = "observableUnit"
+# MEASUREMENT_UNIT_COLUMN = "measurementUnit"
+# MEASUREMENT_TIME_UNIT_COLUMN = "timeUnit"
+# CONDITION_UNIT_COLUMN_SUFFIX = "Unit"
+#
+# from rich import pretty
+# from rich.console import Console
+# from rich.theme import Theme
+#
+#
+# pretty.install()
+# custom_theme = Theme(
+#     {
+#         "success": "green",
+#         "info": "blue",
+#         "warning": "orange3",
+#         "error": "red",
+#     }
+# )
+#
+# console = Console(record=True, theme=custom_theme)
 
 
 def example_simulation(model_path: Path) -> pd.DataFrame:
