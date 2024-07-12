@@ -1,3 +1,4 @@
+"""Optimization using petab and pypesto."""
 import petab
 from pathlib import Path
 import numpy as np
@@ -36,6 +37,7 @@ print(
     f"Absolute tolerance after change: {problem.objective.amici_solver.getAbsoluteTolerance()}"
 )
 
+
 optimizer_options = {"maxiter": 1e4, "fatol": 1e-12, "frtol": 1e-12}
 
 optimizer = pypesto.optimize.FidesOptimizer(
@@ -47,9 +49,8 @@ history_options = pypesto.HistoryOptions(trace_record=True)
 opt_options = pypesto.optimize.OptimizeOptions()
 console.print(opt_options)
 
-n_starts = 20  # usually a value >= 100 should be used
+n_starts = 100  # usually a value >= 100 should be used
 engine = pypesto.engine.MultiProcessEngine()
-
 
 # Set seed for reproducibility
 np.random.seed(1)
@@ -67,11 +68,12 @@ console.rule("results", style="white")
 console.print(result.summary())
 fig_path: Path = Path(__file__).parent / "results"
 
-
+# see https://pypesto.readthedocs.io/en/latest/example/amici.html#2.-Optimization
 import pypesto.visualize.model_fit as model_fit
 ax = model_fit.visualize_optimized_model_fit(
     petab_problem=petab_problem, result=result, pypesto_problem=problem
 )
+plt.show()
 pypesto.visualize.waterfall(result)
 plt.savefig(str(fig_path) + '/01_waterfall.png')
 
@@ -97,6 +99,9 @@ plt.savefig(str(fig_path) + '/04_opt_scatter.png')
 #
 # pypesto.visualize.profiles(result)
 # plt.savefig(str(fig_path) + '/05_profiles.png')
+
+
+
 
 console.rule("Bayesian Sampler", style="white")
 sampler = pypesto.sample.AdaptiveMetropolisSampler()
@@ -128,7 +133,3 @@ plt.savefig(str(fig_path) + '/08_cis.png')
 pypesto.visualize.sampling_1d_marginals(result)
 plt.savefig(str(fig_path) + '/09_marginals.png')
 plt.show()
-
-
-
-

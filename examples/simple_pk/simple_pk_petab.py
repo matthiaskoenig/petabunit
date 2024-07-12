@@ -13,7 +13,7 @@ from petabunit.petabunits import MEASUREMENT_TIME_UNIT_COLUMN, MEASUREMENT_UNIT_
 def example_simulation(model_path: Path, fig_folder: Path, **kwargs) -> pd.DataFrame:
     np.random.seed(1234)
     r: roadrunner.RoadRunner = roadrunner.RoadRunner(str(model_path))
-    print(f"True k: {r.getValue('kabs')}, True CL: {r.getValue('CL')}")
+    console.print(f"True k: {r.getValue('kabs')}, True CL: {r.getValue('CL')}")
     sim = r.simulate(start=0, end=20, steps=100, **kwargs)
     df = pd.DataFrame(sim, columns=sim.colnames)
 
@@ -76,6 +76,7 @@ def create_petab_example(model_path: Path, fig_path: Path):
 if __name__ == '__main__':
     model_path: Path = Path(__file__).parent / "simple_pk.xml"
     fig_path: Path = Path(__file__).parent / "results"
+    fig_path.mkdir(exist_ok=True)
     create_petab_example(model_path, fig_path)
 
     import petab
