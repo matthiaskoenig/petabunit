@@ -107,12 +107,26 @@ result = pypesto.sample.sample(
     result=result,
 )
 
+pypesto.sample.effective_sample_size(result=result)
+ess = result.sample_result.effective_sample_size
+print(
+    f"Effective sample size per computation time: {round(ess/result.sample_result.time,2)}"
+)
+
 pypesto.visualize.sampling_fval_traces(result)
 plt.tight_layout()
 plt.savefig(str(fig_path) + '/06_sampling_fval_traces.png')
 
+pypesto.visualize.sampling_parameter_traces(
+    result, use_problem_bounds=False, size=(12, 5)
+)
+plt.savefig(str(fig_path) + '/07_traces.png')
+
+pypesto.visualize.sampling_parameter_cis(result, alpha=[99, 95, 90], size=(10, 5))
+plt.savefig(str(fig_path) + '/08_cis.png')
+
 pypesto.visualize.sampling_1d_marginals(result)
-plt.savefig(str(fig_path) + '/07_marginals.png')
+plt.savefig(str(fig_path) + '/09_marginals.png')
 plt.show()
 
 
