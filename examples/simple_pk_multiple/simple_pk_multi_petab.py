@@ -31,7 +31,7 @@ class BivariateLogNormal(multivariate_normal_frozen):
         self.parameter_names = parameter_names
 
     def draw_sample(self, n: int) -> Dict[str, np.array]:
-        sample = self.rvs(n)
+        sample = np.exp(self.rvs(n))
         result = {}
         for j, par in enumerate(self.parameter_names):
             result[par] = sample[:, j]
@@ -39,15 +39,41 @@ class BivariateLogNormal(multivariate_normal_frozen):
 
     def plot_dsn(self,
                  sample: Dict[str, np.array],
-                 ax: plt.Axes,
                  which: List[str] = None) -> None:
+        # FIXME: Adjust the plot dimensions
+
+        # Start with a square Figure.
+        fig = plt.figure(figsize=(6, 6))
+        # Add a gridspec with two rows and two columns and a ratio of 1 to 4 between
+        # the size of the marginal Axes and the main Axes in both directions.
+        # Also adjust the subplot parameters for a square plot.
+        gs = fig.add_gridspec(2, 2, width_ratios=(4, 1), height_ratios=(1, 4),
+                              left=0.1, right=0.9, bottom=0.1, top=0.9,
+                              wspace=0.05, hspace=0.05)
+        # Create the Axes.
+        ax = fig.add_subplot(gs[1, 0])
+        ax_histx = fig.add_subplot(gs[0, 0], sharex=ax)
+        ax_histy = fig.add_subplot(gs[1, 1], sharey=ax)
 
         df = pd.DataFrame.from_dict(sample)
-        x, y = np.mgrid[-5:5:.1, -5:5:.1]
+        x, y = np.mgrid[0:7:.1, 0:7:.1]
         xy = np.dstack((x, y))
-        z = self.pdf(xy)
+        z = self.logpdf(xy)
         ax.contourf(x, y, z, cmap='coolwarm')
         ax.plot(df['kabs'], df['CL'], '*')
+        ax.set_xlabel('K')
+        ax.set_ylabel('CL')
+
+        # ax_histx.tick_params(axis="x", labelbottom=False)
+        # ax_histy.tick_params(axis="y", labelleft=False)
+        #
+        # binwidth = 0.25
+        # xymax = max(np.max(np.abs(x)), np.max(np.abs(y)))
+        # lim = (int(xymax / binwidth) + 1) * binwidth
+        #
+        # bins = np.arange(-lim, lim + binwidth, binwidth)
+        # ax_histx.hist(df['kabs'], bins=bins)
+        # ax_histy.hist(df['CL'], bins=bins, orientation='horizontal')
 
 
 # Create class for simulation
@@ -104,11 +130,10 @@ if __name__ == "__main__":
     true_distribution = BivariateLogNormal(mu=mu, cov=cov, parameter_names=['kabs', 'CL'])
     true_samples = true_distribution.draw_sample(5)
 
-    fig, ax = plt.subplots()
-    true_distribution.plot_dsn(true_samples, ax)
+    true_distribution.plot_dsn(true_samples)
     plt.savefig(str(FIG_PATH) + '/00_dsn.png')
-
-    ode_sim = ODESimulation(model_path=MODEL_PATH, samples=true_samples)
-    ode_sim.sim()
+    #
+    # ode_sim = ODESimulation(model_path=MODEL_PATH, samples=true_samples)
+    # ode_sim.sim()
 
 
