@@ -90,12 +90,12 @@ class ODESimulation:
 
     def sim(self,
             sim_start: int = 0,
-            sim_end: int = 0,
+            sim_end: int = 10,
             sim_steps: int = 100,
             **kwargs):
 
         samples = pd.DataFrame.from_dict(self.samples)
-
+        print(samples)
         dfs = []
 
         for _, row in samples.iterrows():
@@ -114,11 +114,43 @@ class ODESimulation:
 
         return dset
 
+    # def sim_plot(self,
+    #              sim_df: xr.Dataset):
+    #     pass
+    #
+    def to_petab(self,
+                 sim_df: xr.Dataset):
 
+        df_ls = []
 
+        for sim in sim_df['sim'].values:
+            df_s = sim_df.isel(sim=sim).to_dataframe().reset_index()
+            data = []
+            for k, row in df_s.iterrows(): # FIXME: slice xarray accordingly
+                for col in ['y_gut', 'y_cent', 'y_peri']:
+                    col_brackets = '['+col+']'
+                    data.append({
+                        "observableId": f"{col}_observable",
+                        "preequilibrationConditionId": None,
+                        "simulationConditionId": f"model1_data{sim}",
+                        "measurement": row[f"{col_brackets}"], # !
+                        MEASUREMENT_UNIT_COLUMN: "mmole/l",
+                        "time": row["time"], # !
+                        MEASUREMENT_TIME_UNIT_COLUMN: "second",
+                        "observableParameters": None,
+                        "noiseParameters": None,
+                    })
 
+            petab_df = pd.DataFrame(data)
 
+            df_ls.append(petab_df)
 
+        measurement_df = pd.concat(df_ls)
+        # console.print(measurement_df.info())
+        # console.print(measurement_df.groupby(['simulationConditionId']).size())
+
+        measurement_df.to_csv(self.model_path.parent / "measurements_multi_pk.tsv",
+                              sep="\t", index=False)
 
 # Create class for petab format
 
@@ -132,8 +164,10 @@ if __name__ == "__main__":
 
     true_distribution.plot_dsn(true_samples)
     plt.savefig(str(FIG_PATH) + '/00_dsn.png')
-    #
-    # ode_sim = ODESimulation(model_path=MODEL_PATH, samples=true_samples)
-    # ode_sim.sim()
+
+    ode_sim = ODESimulation(model_path=MODEL_PATH, samples=true_samples)
+    synth_df = ode_sim.sim()
+    # console.print(synth_df)
+    ode_sim.to_petab(synth_df)
 
 
