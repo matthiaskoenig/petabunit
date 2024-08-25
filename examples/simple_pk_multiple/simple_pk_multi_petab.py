@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Dict, Union, List
+from typing import Callable, Dict, Union, List, Optional
 from pathlib import Path
 from matplotlib import pyplot as plt
 import roadrunner
@@ -82,11 +82,13 @@ class ODESimulation:
 
     def __init__(self,
                  model_path: Path,
-                 samples: Dict[str, np.array]
+                 samples: Dict[str, np.array],
+                 compartment_starting_values: Dict[str, int]
                  ):
         self.model_path = model_path
         self.r: roadrunner.RoadRunner = roadrunner.RoadRunner(str(model_path))
         self.samples = samples
+        self.compartment_starting_values = compartment_starting_values
 
     def sim(self,
             sim_start: int = 0,
@@ -120,20 +122,29 @@ class ODESimulation:
     #
     def to_petab(self,
                  sim_df: xr.Dataset):
+        # FIXME: Add parameters [kabs, CL] and observable [all the y_s] table
 
-        df_ls = []
+        measurement_ls: List[pd.DataFrame] = []
+        condition_ls: List[Dict[str, Optional[str, float, int]]] = []
 
         for sim in sim_df['sim'].values:
             df_s = sim_df.isel(sim=sim).to_dataframe().reset_index()
-            data = []
-            for k, row in df_s.iterrows(): # FIXME: slice xarray accordingly
-                for col in ['y_gut', 'y_cent', 'y_peri']:
-                    col_brackets = '['+col+']'
-                    data.append({
+            unique_measurement = []
+
+            condition_ls.append({
+                'conditionId': f'model1_data{sim}',
+                'conditionName': ''
+            })
+
+            for col in ['y_gut', 'y_cent', 'y_peri']:
+                condition_ls[-1].update({col: self.compartment_starting_values[col]})
+                col_brackets = '[' + col + ']'
+                for k, row in df_s.iterrows():
+                    unique_measurement.append({
                         "observableId": f"{col}_observable",
                         "preequilibrationConditionId": None,
                         "simulationConditionId": f"model1_data{sim}",
-                        "measurement": row[f"{col_brackets}"], # !
+                        "measurement": row[col_brackets], # !
                         MEASUREMENT_UNIT_COLUMN: "mmole/l",
                         "time": row["time"], # !
                         MEASUREMENT_TIME_UNIT_COLUMN: "second",
@@ -141,16 +152,25 @@ class ODESimulation:
                         "noiseParameters": None,
                     })
 
-            petab_df = pd.DataFrame(data)
+            measurement_sim_df = pd.DataFrame(unique_measurement)
 
-            df_ls.append(petab_df)
+            measurement_ls.append(measurement_sim_df)
 
-        measurement_df = pd.concat(df_ls)
-        # console.print(measurement_df.info())
-        # console.print(measurement_df.groupby(['simulationConditionId']).size())
+            # TODO: conditions table based on the values on sim
+
+        measurement_df = pd.concat(measurement_ls)
+        condition_df = pd.DataFrame(condition_ls)
+        console.print(measurement_df.info())
+        console.print(measurement_df.groupby(['simulationConditionId']).size())
 
         measurement_df.to_csv(self.model_path.parent / "measurements_multi_pk.tsv",
                               sep="\t", index=False)
+
+        condition_df.to_csv(self.model_path.parent / "conditions_multi_pk.tsv",
+                            sep="\t", index=False)
+
+
+
 
 # Create class for petab format
 
@@ -161,11 +181,13 @@ if __name__ == "__main__":
     MODEL_PATH: Path = Path(__file__).parent / "simple_pk.xml"
     true_distribution = BivariateLogNormal(mu=mu, cov=cov, parameter_names=['kabs', 'CL'])
     true_samples = true_distribution.draw_sample(5)
+    compartment_starting_values = {'y_gut': 1, 'y_cent': 0, 'y_peri': 0}
 
     true_distribution.plot_dsn(true_samples)
     plt.savefig(str(FIG_PATH) + '/00_dsn.png')
 
-    ode_sim = ODESimulation(model_path=MODEL_PATH, samples=true_samples)
+    ode_sim = ODESimulation(model_path=MODEL_PATH, samples=true_samples,
+                            compartment_starting_values=compartment_starting_values)
     synth_df = ode_sim.sim()
     # console.print(synth_df)
     ode_sim.to_petab(synth_df)
