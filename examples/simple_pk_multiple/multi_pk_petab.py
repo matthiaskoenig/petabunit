@@ -126,6 +126,8 @@ class ODESimulation:
 
         measurement_ls: List[pd.DataFrame] = []
         condition_ls: List[Dict[str, Optional[str, float, int]]] = []
+        parameter_ls: List[Dict[str, Optional[str, float, int]]] = []
+        observable_ls: List[Dict[str, Optional[str, float, int]]] = []
 
         for sim in sim_df['sim'].values:
             df_s = sim_df.isel(sim=sim).to_dataframe().reset_index()
@@ -137,6 +139,17 @@ class ODESimulation:
             })
 
             for col in ['y_gut', 'y_cent', 'y_peri']:
+                if sim == sim_df['sim'].values[0]:
+                    observable_ls.append({
+                        'observableId': f'{col}_observable',
+                        'observableFormula': col,
+                        'observableName': col,
+                        'noiseDistribution': 'normal',
+                        'noiseFormula': 1,
+                        'observableTransformation': 'lin',
+                        'observableUnit': 'mmol/l'
+                    })
+
                 condition_ls[-1].update({col: self.compartment_starting_values[col]})
                 col_brackets = '[' + col + ']'
                 for k, row in df_s.iterrows():
@@ -156,18 +169,38 @@ class ODESimulation:
 
             measurement_ls.append(measurement_sim_df)
 
-            # TODO: conditions table based on the values on sim
+        parameters: List[str] = list(self.samples.keys())
+
+        for par in parameters:
+            parameter_ls.append({
+                'parameterId': par,
+                'parameterName': par,
+                'parameterScale': 'log10',
+                'lowerBound': 0.01,
+                'upperBound': 100,
+                'nominalValue': 1,
+                'estimate': 1,
+                'parameterUnit': 'l/min'
+            })
 
         measurement_df = pd.concat(measurement_ls)
         condition_df = pd.DataFrame(condition_ls)
-        console.print(measurement_df.info())
-        console.print(measurement_df.groupby(['simulationConditionId']).size())
+        parameter_df = pd.DataFrame(parameter_ls)
+        observable_df = pd.DataFrame(observable_ls)
+        # console.print(measurement_df.info())
+        # console.print(measurement_df.groupby(['simulationConditionId']).size())
 
         measurement_df.to_csv(self.model_path.parent / "measurements_multi_pk.tsv",
                               sep="\t", index=False)
 
         condition_df.to_csv(self.model_path.parent / "conditions_multi_pk.tsv",
                             sep="\t", index=False)
+
+        parameter_df.to_csv(self.model_path.parent / "parameters_multi_pk.tsv",
+                            sep='\t', index=False)
+
+        observable_df.to_csv(self.model_path.parent / "observables_multi_pk.tsv",
+                             sep='\t', index=False)
 
 
 
