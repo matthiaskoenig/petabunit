@@ -4,7 +4,7 @@ problems:
 - condition_files:
   - conditions_multi_pk.tsv
   measurement_files:
-  - measurements_muti_pk.tsv
+  - measurements_multi_pk.tsv
   observable_files:
   - observables_multi_pk.tsv
   sbml_files:
