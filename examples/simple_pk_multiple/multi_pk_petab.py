@@ -20,49 +20,89 @@ FIG_PATH: Path = Path(__file__).parent / "results"
 
 # Create class for distributions
 
-class BivariateLogNormal(multivariate_normal_frozen):
+class BivariateNormal(multivariate_normal_frozen):
     """Based on scipy.stats.multivariate_normal"""
 
     def __init__(self,
                  parameter_names: List[str],
                  mu: np.array,
                  cov: Union[np.array, Covariance]):
-        super(BivariateLogNormal, self).__init__(mean=mu, cov=cov)
+        super(BivariateNormal, self).__init__(mean=mu, cov=cov)
         self.parameter_names = parameter_names
+        self.mu_data = mu
+        self.cov_data = cov
 
-    def draw_sample(self, n: int) -> Dict[str, np.array]:
-        sample = np.exp(self.rvs(n))
+    def draw_sample(self, n: int, seed: Optional[int] = None) -> Dict[str, np.array]:
+        """Draws samples from the distribution."""
+        if seed:
+            np.random.seed(seed)
+        sample = self.rvs(n)
         result = {}
         for j, par in enumerate(self.parameter_names):
             result[par] = sample[:, j]
         return result
 
-    def plot_dsn(self,
-                 sample: Dict[str, np.array],
-                 which: List[str] = None) -> None:
-        # FIXME: Adjust the plot dimensions
+    @staticmethod
+    def plot_distributions(dsns, samples: List[Dict[str, np.array]]) -> None:
+
 
         # Start with a square Figure.
-        fig = plt.figure(figsize=(6, 6))
-        # Add a gridspec with two rows and two columns and a ratio of 1 to 4 between
-        # the size of the marginal Axes and the main Axes in both directions.
-        # Also adjust the subplot parameters for a square plot.
-        gs = fig.add_gridspec(2, 2, width_ratios=(4, 1), height_ratios=(1, 4),
-                              left=0.1, right=0.9, bottom=0.1, top=0.9,
-                              wspace=0.05, hspace=0.05)
-        # Create the Axes.
-        ax = fig.add_subplot(gs[1, 0])
-        ax_histx = fig.add_subplot(gs[0, 0], sharex=ax)
-        ax_histy = fig.add_subplot(gs[1, 1], sharey=ax)
+        # fig = plt.figure(figsize=(6, 6))
+        # # Add a gridspec with two rows and two columns and a ratio of 1 to 4 between
+        # # the size of the marginal Axes and the main Axes in both directions.
+        # # Also adjust the subplot parameters for a square plot.
+        # gs = fig.add_gridspec(2, 2, width_ratios=(4, 1), height_ratios=(1, 4),
+        #                       left=0.1, right=0.9, bottom=0.1, top=0.9,
+        #                       wspace=0.05, hspace=0.05)
+        # # Create the Axes.
+        # ax = fig.add_subplot(gs[1, 0])
+        # ax_histx = fig.add_subplot(gs[0, 0], sharex=ax)
+        # ax_histy = fig.add_subplot(gs[1, 1], sharey=ax)
 
-        df = pd.DataFrame.from_dict(sample)
-        x, y = np.mgrid[0:7:.1, 0:7:.1]
-        xy = np.dstack((x, y))
-        z = self.logpdf(xy)
-        ax.contourf(x, y, z, cmap='coolwarm')
-        ax.plot(df['kabs'], df['CL'], '*')
-        ax.set_xlabel('K')
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 6))
+
+        colors = ["tab:blue", "tab:red"]
+        cmaps = ["Blues", "Reds"]
+
+        # plot distribution
+        # flim = 3
+        # xmin = -max(1.0, self.mu_data[0]) * flim
+        # xmax = max(1.0, self.mu_data[0]) * flim
+        # ymin = -max(1.0, self.mu_data[1]) * flim
+        # ymax = max(1.0, self.mu_data[1]) * flim
+        # console.print(xmax, ymax)
+
+
+
+        # plot samples
+        for k, samples_data in enumerate(samples):
+            df = pd.DataFrame.from_dict(samples_data)
+            ax.plot(
+                df['kabs'], df['CL'],
+                '*',
+                color=colors[k],
+                markeredgecolor='k',
+                markersize=10,
+            )
+
+        # plot pdf
+        xlims = ax.get_xlim()
+        ylims = ax.get_ylim()
+        for k, dsn in enumerate(dsns):
+            xvec = np.linspace(start=xlims[0], stop=xlims[1], num=100)
+            yvec = np.linspace(start=ylims[0], stop=ylims[1], num=100)
+            x, y = np.meshgrid(xvec, yvec)
+
+            xy = np.dstack((x, y))
+            z = dsn.pdf(xy)
+
+            # z[z<0.1] = np.NaN  # filter low probabilities
+            cs = ax.contour(x, y, z, cmap=cmaps[k], levels=20)
+            # fig.colorbar(cs, label="pdf")
+
+        ax.set_xlabel('kabs')
         ax.set_ylabel('CL')
+
 
         # ax_histx.tick_params(axis="x", labelbottom=False)
         # ax_histy.tick_params(axis="y", labelleft=False)
@@ -94,7 +134,7 @@ class ODESimulation:
             sim_start: int = 0,
             sim_end: int = 10,
             sim_steps: int = 100,
-            **kwargs):
+            **kwargs) -> xr.Dataset:
 
         samples = pd.DataFrame.from_dict(self.samples)
         print(samples)
@@ -203,26 +243,53 @@ class ODESimulation:
                              sep='\t', index=False)
 
 
-
-
-# Create class for petab format
-
-
 if __name__ == "__main__":
-    mu = np.array([0, 0])
-    cov = Covariance.from_diagonal([1, 1])
-    MODEL_PATH: Path = Path(__file__).parent / "simple_pk.xml"
-    true_distribution = BivariateLogNormal(mu=mu, cov=cov, parameter_names=['kabs', 'CL'])
-    true_samples = true_distribution.draw_sample(5)
-    compartment_starting_values = {'y_gut': 1, 'y_cent': 0, 'y_peri': 0}
+    seed = None  # 1234
+    n_samples = 50
 
-    true_distribution.plot_dsn(true_samples)
+    # sampling from distribution
+    parameter_names = ['kabs', 'CL']
+
+    # men
+    mu_male = np.array([1, 1])  # mean in normal space
+    cov_male = np.array([
+        [2.0, -1.0],
+        [-1.0, 2.0]
+    ])
+    dsn_male = BivariateNormal(mu=mu_male, cov=cov_male, parameter_names=parameter_names)
+    samples_male = dsn_male.draw_sample(n_samples, seed=seed)
+    console.rule("male", style="white")
+    console.print(samples_male)
+
+    # women
+    mu_female = np.array([10, 10])  # mean in normal space
+    cov_female = np.array([
+        [1.0, 0.0],
+        [0.0, 1.0]
+    ])
+    dsn_female = BivariateNormal(mu=mu_female, cov=cov_female, parameter_names=parameter_names)
+    samples_female = dsn_female.draw_sample(n_samples, seed=seed)
+    console.rule("female", style="white")
+    console.print(samples_female)
+
+    # plot distributions
+    BivariateNormal.plot_distributions(
+        dsns=[dsn_male, dsn_female],
+        samples=[samples_male, samples_female],
+    )
     plt.savefig(str(FIG_PATH) + '/00_dsn.png')
+    plt.show()
 
-    ode_sim = ODESimulation(model_path=MODEL_PATH, samples=true_samples,
+
+    # simulation
+    MODEL_PATH: Path = Path(__file__).parent / "simple_pk.xml"
+    compartment_starting_values = {'y_gut': 1, 'y_cent': 0, 'y_peri': 0}
+    ode_sim = ODESimulation(model_path=MODEL_PATH, samples=samples_male,
                             compartment_starting_values=compartment_starting_values)
-    synth_df = ode_sim.sim()
-    # console.print(synth_df)
-    ode_sim.to_petab(synth_df)
+    synth_dset: xr.Dataset = ode_sim.sim()
+    console.print(synth_dset)
+
+    # convert to PeTab problem
+    ode_sim.to_petab(synth_dset)
 
 
