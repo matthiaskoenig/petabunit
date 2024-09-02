@@ -20,6 +20,10 @@ FIG_PATH: Path = Path(__file__).parent / "results"
 
 # Create class for distributions
 
+
+# FIXME: add a new child class for logmultinorm from multivariate_normal_gen.
+#   Use the method _logpdf and calculate the log of the lognorm
+#   Done for computational issues
 class BivariateNormal(multivariate_normal_frozen):
     """Based on scipy.stats.multivariate_normal"""
 
@@ -36,7 +40,7 @@ class BivariateNormal(multivariate_normal_frozen):
         """Draws samples from the distribution."""
         if seed:
             np.random.seed(seed)
-        sample = self.rvs(n)
+        sample = np.exp(self.rvs(n))
         result = {}
         for j, par in enumerate(self.parameter_names):
             result[par] = sample[:, j]
@@ -94,10 +98,10 @@ class BivariateNormal(multivariate_normal_frozen):
             x, y = np.meshgrid(xvec, yvec)
 
             xy = np.dstack((x, y))
-            z = dsn.pdf(xy)
+            z = np.exp(dsn.pdf(xy))  # FIXME: Change to lognormal pdf
 
             # z[z<0.1] = np.NaN  # filter low probabilities
-            cs = ax.contour(x, y, z, cmap=cmaps[k], levels=20)
+            cs = ax.contour(x, y, z, cmap=cmaps[k], levels=100)
             # fig.colorbar(cs, label="pdf")
 
         ax.set_xlabel('kabs')
@@ -251,10 +255,10 @@ if __name__ == "__main__":
     parameter_names = ['kabs', 'CL']
 
     # men
-    mu_male = np.array([1, 1])  # mean in normal space
+    mu_male = np.log(np.array([0.5, 0.5]))  # mean in normal space
     cov_male = np.array([
-        [2.0, -1.0],
-        [-1.0, 2.0]
+        [1.0, 0.0],
+        [0.0, 1.0]
     ])
     dsn_male = BivariateNormal(mu=mu_male, cov=cov_male, parameter_names=parameter_names)
     samples_male = dsn_male.draw_sample(n_samples, seed=seed)
@@ -262,7 +266,7 @@ if __name__ == "__main__":
     console.print(samples_male)
 
     # women
-    mu_female = np.array([10, 10])  # mean in normal space
+    mu_female = np.log(np.array([2, 2]))  # mean in normal space
     cov_female = np.array([
         [1.0, 0.0],
         [0.0, 1.0]
