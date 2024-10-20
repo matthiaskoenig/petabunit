@@ -1,14 +1,10 @@
-from dataclasses import dataclass
-from typing import Callable, Dict, Union, List, Optional
+from typing import Dict, List, Optional
 from pathlib import Path
-from matplotlib import pyplot as plt
 import roadrunner
 import pandas as pd
 import numpy as np
 import xarray as xr
-from dataclasses import dataclass
-from scipy.stats import rv_continuous, multivariate_normal, Covariance
-from scipy.stats._multivariate import multivariate_normal_frozen, multivariate_normal_gen
+from scipy.stats import multivariate_normal, Covariance
 from matplotlib import pyplot as plt
 
 from petabunit import EXAMPLES_DIR
@@ -22,10 +18,6 @@ _LOG_2PI = np.log(2 * np.pi)
 # Create class for distributions
 
 
-# FIXME: add a new child class for logmultinorm from multivariate_normal_gen.
-#   Use the method _logpdf and calculate the log of the lognorm
-#   Done for computational issues
-
 class BivariateLogNormal:
 
     def __init__(self, parameter_names: List[str], mean: np.array, cov: Covariance):
@@ -34,7 +26,6 @@ class BivariateLogNormal:
         self.cov = cov
 
     def rvs(self, size: int, seed: Optional[int]):
-
         if seed:
             np.random.seed(seed)
 
@@ -63,34 +54,10 @@ class BivariateLogNormal:
     @staticmethod
     def plot_distributions(dsns, samples: List[Dict[str, np.array]]) -> None:
 
-
-        # Start with a square Figure.
-        # fig = plt.figure(figsize=(6, 6))
-        # # Add a gridspec with two rows and two columns and a ratio of 1 to 4 between
-        # # the size of the marginal Axes and the main Axes in both directions.
-        # # Also adjust the subplot parameters for a square plot.
-        # gs = fig.add_gridspec(2, 2, width_ratios=(4, 1), height_ratios=(1, 4),
-        #                       left=0.1, right=0.9, bottom=0.1, top=0.9,
-        #                       wspace=0.05, hspace=0.05)
-        # # Create the Axes.
-        # ax = fig.add_subplot(gs[1, 0])
-        # ax_histx = fig.add_subplot(gs[0, 0], sharex=ax)
-        # ax_histy = fig.add_subplot(gs[1, 1], sharey=ax)
-
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 6))
 
         colors = ["tab:blue", "tab:red"]
         cmaps = ["Blues", "Reds"]
-
-        # plot distribution
-        # flim = 3
-        # xmin = -max(1.0, self.mu_data[0]) * flim
-        # xmax = max(1.0, self.mu_data[0]) * flim
-        # ymin = -max(1.0, self.mu_data[1]) * flim
-        # ymax = max(1.0, self.mu_data[1]) * flim
-        # console.print(xmax, ymax)
-
-
 
         # plot samples
         for k, samples_data in enumerate(samples):
@@ -108,37 +75,17 @@ class BivariateLogNormal:
         xlims = ax.get_xlim()
         ylims = ax.get_ylim()
         for k, dsn in enumerate(dsns):
-            console.print(f'Xlims: {xlims[0]}, {xlims[1]}')
-            console.print(f'Ylims: {ylims[0]}, {ylims[1]}')
             xvec = np.linspace(start=xlims[0], stop=xlims[1], num=100)
             yvec = np.linspace(start=ylims[0], stop=ylims[1], num=100)
             x, y = np.meshgrid(xvec, yvec)
 
             xy = np.dstack((x, y))
-            console.rule('Z')
-            #console.print(xy)
             z = dsn.pdf(xy)
-            console.print(z.shape)
-            console.print(pd.DataFrame(z).describe())
 
-            # z[z<0.1] = np.NaN  # filter low probabilities
             cs = ax.contour(x, y, z, cmap=cmaps[k], levels=1000, alpha=0.3)
-            # fig.colorbar(cs, label="pdf")
 
         ax.set_xlabel('kabs')
         ax.set_ylabel('CL')
-
-
-        # ax_histx.tick_params(axis="x", labelbottom=False)
-        # ax_histy.tick_params(axis="y", labelleft=False)
-        #
-        # binwidth = 0.25
-        # xymax = max(np.max(np.abs(x)), np.max(np.abs(y)))
-        # lim = (int(xymax / binwidth) + 1) * binwidth
-        #
-        # bins = np.arange(-lim, lim + binwidth, binwidth)
-        # ax_histx.hist(df['kabs'], bins=bins)
-        # ax_histy.hist(df['CL'], bins=bins, orientation='horizontal')
 
 
 # Create class for simulation
@@ -181,10 +128,6 @@ class ODESimulation:
 
         return dset
 
-    # def sim_plot(self,
-    #              sim_df: xr.Dataset):
-    #     pass
-    #
     def to_petab(self,
                  sim_df: xr.Dataset):
         # FIXME: Add parameters [kabs, CL] and observable [all the y_s] table
@@ -252,8 +195,6 @@ class ODESimulation:
         condition_df = pd.DataFrame(condition_ls)
         parameter_df = pd.DataFrame(parameter_ls)
         observable_df = pd.DataFrame(observable_ls)
-        # console.print(measurement_df.info())
-        # console.print(measurement_df.groupby(['simulationConditionId']).size())
 
         measurement_df.to_csv(self.model_path.parent / "measurements_multi_pk.tsv",
                               sep="\t", index=False)
@@ -282,7 +223,6 @@ if __name__ == "__main__":
                                   parameter_names=parameter_names)
     samples_male = dsn_male.rvs(n_samples, seed=seed)
     console.rule("male", style="white")
-    # console.print(samples_male)
 
     # women
     mu_female = np.log(np.array([0.4, 0.1]))  # mean in normal space
@@ -291,7 +231,6 @@ if __name__ == "__main__":
                                     parameter_names=parameter_names)
     samples_female = dsn_female.rvs(n_samples, seed=seed)
     console.rule("female", style="white")
-    # console.print(samples_female)
 
     # plot distributions
     BivariateLogNormal.plot_distributions(
