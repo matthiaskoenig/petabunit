@@ -23,3 +23,5 @@ __pycache__
 *.tsv#
 *.xlsx#
 
+examples/simple_pk/results
+
