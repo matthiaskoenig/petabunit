@@ -8,7 +8,7 @@ import numpy as np
 import xarray as xr
 from dataclasses import dataclass
 from scipy.stats import rv_continuous, multivariate_normal, Covariance
-from scipy.stats._multivariate import multivariate_normal_frozen
+from scipy.stats._multivariate import multivariate_normal_frozen, multivariate_normal_gen
 from matplotlib import pyplot as plt
 
 from petabunit import EXAMPLES_DIR
@@ -17,6 +17,7 @@ from petabunit.petabunits import MEASUREMENT_TIME_UNIT_COLUMN, MEASUREMENT_UNIT_
 
 FIG_PATH: Path = Path(__file__).parent / "results"
 
+_LOG_2PI = np.log(2 * np.pi)
 
 # Create class for distributions
 
@@ -24,27 +25,40 @@ FIG_PATH: Path = Path(__file__).parent / "results"
 # FIXME: add a new child class for logmultinorm from multivariate_normal_gen.
 #   Use the method _logpdf and calculate the log of the lognorm
 #   Done for computational issues
-class BivariateNormal(multivariate_normal_frozen):
-    """Based on scipy.stats.multivariate_normal"""
 
-    def __init__(self,
-                 parameter_names: List[str],
-                 mu: np.array,
-                 cov: Union[np.array, Covariance]):
-        super(BivariateNormal, self).__init__(mean=mu, cov=cov)
+class BivariateLogNormal:
+
+    def __init__(self, parameter_names: List[str], mean: np.array, cov: Covariance):
         self.parameter_names = parameter_names
-        self.mu_data = mu
-        self.cov_data = cov
+        self.mean = mean
+        self.cov = cov
 
-    def draw_sample(self, n: int, seed: Optional[int] = None) -> Dict[str, np.array]:
-        """Draws samples from the distribution."""
+    def rvs(self, size: int, seed: Optional[int]):
+
         if seed:
             np.random.seed(seed)
-        sample = np.exp(self.rvs(n))
+
+        multi_norm = multivariate_normal(self.mean, self.cov)
+        sample = np.exp(multi_norm.rvs(size=size))
+
         result = {}
         for j, par in enumerate(self.parameter_names):
             result[par] = sample[:, j]
+
         return result
+
+    def logpdf(self,  x: np.array):
+        log_det_cov, rank = self.cov.log_pdet, self.cov.rank
+        dev = np.log(x) - self.mean
+        if dev.ndim > 1:
+            log_det_cov = log_det_cov[..., np.newaxis]
+            rank = rank[..., np.newaxis]
+        maha = np.sum(np.square(self.cov.whiten(dev)) + 2 * np.log(x), axis=-1)
+
+        return -0.5 * (rank * _LOG_2PI + log_det_cov + maha)
+
+    def pdf(self, x: np.array):
+        return np.exp(self.logpdf(x))
 
     @staticmethod
     def plot_distributions(dsns, samples: List[Dict[str, np.array]]) -> None:
@@ -83,25 +97,32 @@ class BivariateNormal(multivariate_normal_frozen):
             df = pd.DataFrame.from_dict(samples_data)
             ax.plot(
                 df['kabs'], df['CL'],
-                '*',
+                'o',
                 color=colors[k],
                 markeredgecolor='k',
-                markersize=10,
+                markersize=4,
+                alpha=0.8
             )
 
         # plot pdf
         xlims = ax.get_xlim()
         ylims = ax.get_ylim()
         for k, dsn in enumerate(dsns):
+            console.print(f'Xlims: {xlims[0]}, {xlims[1]}')
+            console.print(f'Ylims: {ylims[0]}, {ylims[1]}')
             xvec = np.linspace(start=xlims[0], stop=xlims[1], num=100)
             yvec = np.linspace(start=ylims[0], stop=ylims[1], num=100)
             x, y = np.meshgrid(xvec, yvec)
 
             xy = np.dstack((x, y))
-            z = np.exp(dsn.pdf(xy))  # FIXME: Change to lognormal pdf
+            console.rule('Z')
+            #console.print(xy)
+            z = dsn.pdf(xy)
+            console.print(z.shape)
+            console.print(pd.DataFrame(z).describe())
 
             # z[z<0.1] = np.NaN  # filter low probabilities
-            cs = ax.contour(x, y, z, cmap=cmaps[k], levels=100)
+            cs = ax.contour(x, y, z, cmap=cmaps[k], levels=1000, alpha=0.3)
             # fig.colorbar(cs, label="pdf")
 
         ax.set_xlabel('kabs')
@@ -248,36 +269,32 @@ class ODESimulation:
 
 
 if __name__ == "__main__":
-    seed = None  # 1234
+    seed = None # 1234
     n_samples = 50
 
     # sampling from distribution
     parameter_names = ['kabs', 'CL']
 
     # men
-    mu_male = np.log(np.array([0.5, 0.5]))  # mean in normal space
-    cov_male = np.array([
-        [1.0, 0.0],
-        [0.0, 1.0]
-    ])
-    dsn_male = BivariateNormal(mu=mu_male, cov=cov_male, parameter_names=parameter_names)
-    samples_male = dsn_male.draw_sample(n_samples, seed=seed)
+    mu_male = np.log(np.array([0.1, 0.5]))  # mean in normal space
+    cov_male = Covariance.from_diagonal([1, 1])
+    dsn_male = BivariateLogNormal(mean=mu_male, cov=cov_male,
+                                  parameter_names=parameter_names)
+    samples_male = dsn_male.rvs(n_samples, seed=seed)
     console.rule("male", style="white")
-    console.print(samples_male)
+    # console.print(samples_male)
 
     # women
-    mu_female = np.log(np.array([2, 2]))  # mean in normal space
-    cov_female = np.array([
-        [1.0, 0.0],
-        [0.0, 1.0]
-    ])
-    dsn_female = BivariateNormal(mu=mu_female, cov=cov_female, parameter_names=parameter_names)
-    samples_female = dsn_female.draw_sample(n_samples, seed=seed)
+    mu_female = np.log(np.array([0.4, 0.1]))  # mean in normal space
+    cov_female = Covariance.from_diagonal([1, 1])
+    dsn_female = BivariateLogNormal(mean=mu_female, cov=cov_female,
+                                    parameter_names=parameter_names)
+    samples_female = dsn_female.rvs(n_samples, seed=seed)
     console.rule("female", style="white")
-    console.print(samples_female)
+    # console.print(samples_female)
 
     # plot distributions
-    BivariateNormal.plot_distributions(
+    BivariateLogNormal.plot_distributions(
         dsns=[dsn_male, dsn_female],
         samples=[samples_male, samples_female],
     )
