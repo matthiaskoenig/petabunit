@@ -20,12 +20,20 @@ _LOG_2PI = np.log(2 * np.pi)
 
 class BivariateLogNormal:
 
-    def __init__(self, parameter_names: List[str], mean: np.array, cov: Covariance):
+    def __init__(self,
+                 parameter_names: List[str],
+                 mean: np.array,
+                 cov: Covariance
+                 ) -> None:
         self.parameter_names = parameter_names
         self.mean = mean
         self.cov = cov
 
-    def rvs(self, size: int, seed: Optional[int]):
+    def rvs(self,
+            size: int,
+            seed: Optional[int]
+            ) -> Dict[str, np.array]:
+
         if seed:
             np.random.seed(seed)
 
@@ -38,7 +46,10 @@ class BivariateLogNormal:
 
         return result
 
-    def logpdf(self,  x: np.array):
+    def logpdf(self,
+               x: np.array
+               ) -> np.array:
+
         log_det_cov, rank = self.cov.log_pdet, self.cov.rank
         dev = np.log(x) - self.mean
         if dev.ndim > 1:
@@ -48,7 +59,9 @@ class BivariateLogNormal:
 
         return -0.5 * (rank * _LOG_2PI + log_det_cov + maha)
 
-    def pdf(self, x: np.array):
+    def pdf(self,
+            x: np.array
+            ) -> np.array:
         return np.exp(self.logpdf(x))
 
     @staticmethod
