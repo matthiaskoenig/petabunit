@@ -4,7 +4,7 @@ import roadrunner
 import pandas as pd
 import numpy as np
 import xarray as xr
-from scipy.stats import multivariate_normal, Covariance
+from scipy.stats import multivariate_normal, Covariance, gaussian_kde
 from matplotlib import pyplot as plt
 
 from petabunit import EXAMPLES_DIR
@@ -86,6 +86,18 @@ class BivariateLogNormal:
                     markersize=4,
                     alpha=0.8
                 )
+
+                # Gaussian KDE
+                # xmin = df['kabs'].min()
+                # xmax = df['kabs'].max()
+                # ymin = df['CL'].min()
+                # ymax = df['CL'].max()
+                # X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+                # positions = np.vstack([X.ravel(), Y.ravel()])
+                # values = np.vstack([df['kabs'], df['CL']])
+                # kernel = gaussian_kde(values)
+                # Z = np.reshape(kernel(positions).T, X.shape)
+                # ax.imshow(np.rot90(Z), cmap=cmaps[k], extent=[xmin, xmax, ymin, ymax])
 
         plot_samples()
 
