@@ -72,21 +72,27 @@ class BivariateLogNormal:
         colors = ["tab:blue", "tab:red"]
         cmaps = ["Blues", "Reds"]
 
-        # plot samples
-        for k, samples_data in enumerate(samples):
-            df = pd.DataFrame.from_dict(samples_data)
-            ax.plot(
-                df['kabs'], df['CL'],
-                'o',
-                color=colors[k],
-                markeredgecolor='k',
-                markersize=4,
-                alpha=0.8
-            )
+        def calculate_limits(samples):
+            return xlims, ylims
+
+        def plot_samples():
+            for k, samples_data in enumerate(samples):
+                df = pd.DataFrame.from_dict(samples_data)
+                ax.plot(
+                    df['kabs'], df['CL'],
+                    'o',
+                    color=colors[k],
+                    markeredgecolor='k',
+                    markersize=4,
+                    alpha=0.8
+                )
+
+        plot_samples()
 
         # plot pdf
         xlims = ax.get_xlim()
         ylims = ax.get_ylim()
+
         for k, dsn in enumerate(dsns):
             xvec = np.linspace(start=xlims[0], stop=xlims[1], num=100)
             yvec = np.linspace(start=ylims[0], stop=ylims[1], num=100)
@@ -95,8 +101,17 @@ class BivariateLogNormal:
             xy = np.dstack((x, y))
             z = dsn.pdf(xy)
 
-            cs = ax.contour(x, y, z, cmap=cmaps[k], levels=1000, alpha=0.3)
+            cs = ax.contour(
+                x, y, z,
+                colors=colors[k],
+                # cmap=cmaps[k],
+                levels=20, alpha=1.0
+            )
 
+        # plot_samples()
+        scale = "log"
+        ax.set_xscale(scale)
+        ax.set_yscale(scale)
         ax.set_xlabel('kabs')
         ax.set_ylabel('CL')
 
@@ -112,6 +127,13 @@ class ODESimulation:
                  ):
         self.model_path = model_path
         self.r: roadrunner.RoadRunner = roadrunner.RoadRunner(str(model_path))
+
+        integrator: roadrunner.Integrator = self.r.integrator
+        integrator.setSetting("absolute_tolerance", 1e-6)
+        integrator.setSetting("relative_tolerance", 1e-6)
+
+
+
         self.samples = samples
         self.compartment_starting_values = compartment_starting_values
 
@@ -224,13 +246,13 @@ class ODESimulation:
 
 if __name__ == "__main__":
     seed = None # 1234
-    n_samples = 50
+    n_samples = 100
 
     # sampling from distribution
     parameter_names = ['kabs', 'CL']
 
     # men
-    mu_male = np.log(np.array([0.1, 0.5]))  # mean in normal space
+    mu_male = np.array([0.1, 0.5])  # mean in normal space
     cov_male = Covariance.from_diagonal([1, 1])
     dsn_male = BivariateLogNormal(mean=mu_male, cov=cov_male,
                                   parameter_names=parameter_names)
@@ -238,7 +260,8 @@ if __name__ == "__main__":
     console.rule("male", style="white")
 
     # women
-    mu_female = np.log(np.array([0.4, 0.1]))  # mean in normal space
+    mu_female = np.array([10, 10])  # mean in normal space
+    # mu_female = np.log(np.array([3, 3]))  # mean in normal space
     cov_female = Covariance.from_diagonal([1, 1])
     dsn_female = BivariateLogNormal(mean=mu_female, cov=cov_female,
                                     parameter_names=parameter_names)
@@ -265,4 +288,10 @@ if __name__ == "__main__":
     # convert to PeTab problem
     ode_sim.to_petab(synth_dset)
 
+
+    # 1. define distributions (multi-var log normal)
+    # 2. calculate a PDF from that (PDF calculation) whatever analytical, complicated
+
+    # 3. take samples
+    # 4. do a kernel estimate of the samples => pdf (
 
