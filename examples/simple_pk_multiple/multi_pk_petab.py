@@ -134,7 +134,8 @@ class ODESimulation:
 
     def __init__(self,
                  model_path: Path,
-                 samples: Dict[str, np.array],
+                 samples: List[Dict[str, np.array]],
+                 pop_vars: Dict[str, List[str]],
                  compartment_starting_values: Dict[str, int]
                  ):
         self.model_path = model_path
@@ -144,9 +145,8 @@ class ODESimulation:
         integrator.setSetting("absolute_tolerance", 1e-6)
         integrator.setSetting("relative_tolerance", 1e-6)
 
-
-
         self.samples = samples
+        self.pop_vars = pop_vars
         self.compartment_starting_values = compartment_starting_values
 
     def sim(self,
@@ -155,25 +155,33 @@ class ODESimulation:
             sim_steps: int = 100,
             **kwargs) -> xr.Dataset:
 
-        samples = pd.DataFrame.from_dict(self.samples)
-        print(samples)
-        dfs = []
+        dsets: List[xr.Dataset] = []
 
-        for _, row in samples.iterrows():
-            for par_name, par in zip(row.index, row):
-                self.r.setValue(par_name, par)
+        for sample in self.samples:
 
-            s = self.r.simulate(start=sim_start,
-                                end=sim_end,
-                                steps=sim_steps,
-                                **kwargs)
-            df = pd.DataFrame(s, columns=s.colnames).set_index("time")
-            dfs.append(df)
+            sample = pd.DataFrame.from_dict(sample)
+            dfs = []
 
-        dset = xr.concat([df.to_xarray() for df in dfs],
-                         dim=pd.Index(np.arange(samples.shape[0]), name='sim'))
+            for _, row in sample.iterrows():
+                for par_name, par in zip(row.index, row):
+                    self.r.setValue(par_name, par)
 
-        return dset
+                s = self.r.simulate(start=sim_start,
+                                    end=sim_end,
+                                    steps=sim_steps,
+                                    **kwargs)
+                df = pd.DataFrame(s, columns=s.colnames).set_index("time")
+                dfs.append(df)
+
+            dset = xr.concat([df.to_xarray() for df in dfs],
+                             dim=pd.Index(np.arange(sample.shape[0]), name='sim'))
+
+            dsets.append(dset)
+
+        result = xr.concat(dsets, dim=pd.Index(list(self.pop_vars.values())[0],
+                                               name=list(self.pop_vars.keys())[0]))
+
+        return result
 
     def to_petab(self,
                  sim_df: xr.Dataset):
@@ -264,7 +272,7 @@ if __name__ == "__main__":
     parameter_names = ['kabs', 'CL']
 
     # men
-    mu_male = np.array([0.1, 0.5])  # mean in normal space
+    mu_male = np.log(np.array([0.1, 0.5]))  # mean in normal space
     cov_male = Covariance.from_diagonal([1, 1])
     dsn_male = BivariateLogNormal(mean=mu_male, cov=cov_male,
                                   parameter_names=parameter_names)
@@ -272,7 +280,7 @@ if __name__ == "__main__":
     console.rule("male", style="white")
 
     # women
-    mu_female = np.array([10, 10])  # mean in normal space
+    mu_female = np.log(np.array([0.01, 0.5]))  # mean in normal space
     # mu_female = np.log(np.array([3, 3]))  # mean in normal space
     cov_female = Covariance.from_diagonal([1, 1])
     dsn_female = BivariateLogNormal(mean=mu_female, cov=cov_female,
@@ -292,13 +300,15 @@ if __name__ == "__main__":
     # simulation
     MODEL_PATH: Path = Path(__file__).parent / "simple_pk.xml"
     compartment_starting_values = {'y_gut': 1, 'y_cent': 0, 'y_peri': 0}
-    ode_sim = ODESimulation(model_path=MODEL_PATH, samples=samples_male,
+    ode_sim = ODESimulation(model_path=MODEL_PATH,
+                            samples=[samples_male, samples_female],
+                            pop_vars={'gender': ['male', 'female']},
                             compartment_starting_values=compartment_starting_values)
     synth_dset: xr.Dataset = ode_sim.sim()
     console.print(synth_dset)
 
     # convert to PeTab problem
-    ode_sim.to_petab(synth_dset)
+    # ode_sim.to_petab(synth_dset)
 
 
     # 1. define distributions (multi-var log normal)
