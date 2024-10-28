@@ -184,55 +184,63 @@ class ODESimulation:
         return result
 
     def to_petab(self,
-                 sim_df: xr.Dataset):
-        # FIXME: Add parameters [kabs, CL] and observable [all the y_s] table
+                 sim_dfs: xr.Dataset):
 
         measurement_ls: List[pd.DataFrame] = []
         condition_ls: List[Dict[str, Optional[str, float, int]]] = []
         parameter_ls: List[Dict[str, Optional[str, float, int]]] = []
         observable_ls: List[Dict[str, Optional[str, float, int]]] = []
 
-        for sim in sim_df['sim'].values:
-            df_s = sim_df.isel(sim=sim).to_dataframe().reset_index()
-            unique_measurement = []
+        for j, gen in enumerate(sim_dfs['gender'].values):
 
-            condition_ls.append({
-                'conditionId': f'model1_data{sim}',
-                'conditionName': ''
-            })
+            measurement_pop: List[pd.DataFrame] = []
 
-            for col in ['y_gut', 'y_cent', 'y_peri']:
-                if sim == sim_df['sim'].values[0]:
-                    observable_ls.append({
-                        'observableId': f'{col}_observable',
-                        'observableFormula': col,
-                        'observableName': col,
-                        'noiseDistribution': 'normal',
-                        'noiseFormula': 1,
-                        'observableTransformation': 'lin',
-                        'observableUnit': 'mmol/l'
-                    })
+            sim_df = sim_dfs.sel(gender=gen)
 
-                condition_ls[-1].update({col: self.compartment_starting_values[col]})
-                col_brackets = '[' + col + ']'
-                for k, row in df_s.iterrows():
-                    unique_measurement.append({
-                        "observableId": f"{col}_observable",
-                        "preequilibrationConditionId": None,
-                        "simulationConditionId": f"model1_data{sim}",
-                        "measurement": row[col_brackets], # !
-                        MEASUREMENT_UNIT_COLUMN: "mmole/l",
-                        "time": row["time"], # !
-                        MEASUREMENT_TIME_UNIT_COLUMN: "second",
-                        "observableParameters": None,
-                        "noiseParameters": None,
-                    })
+            for sim in sim_df['sim'].values:
+                df_s = sim_df.isel(sim=sim).to_dataframe().reset_index()
+                unique_measurement = []
 
-            measurement_sim_df = pd.DataFrame(unique_measurement)
+                condition_ls.append({
+                    'conditionId': f'model{j}_data{sim}',
+                    'conditionName': ''
+                })
 
-            measurement_ls.append(measurement_sim_df)
+                for col in ['y_gut', 'y_cent', 'y_peri']:
+                    if sim == sim_df['sim'].values[0] and j == 0:
+                        observable_ls.append({
+                            'observableId': f'{col}_observable',
+                            'observableFormula': col,
+                            'observableName': col,
+                            'noiseDistribution': 'normal',
+                            'noiseFormula': 1,
+                            'observableTransformation': 'lin',
+                            'observableUnit': 'mmol/l'
+                        })
 
-        parameters: List[str] = list(self.samples.keys())
+                    condition_ls[-1].update({col: self.compartment_starting_values[col]})
+                    col_brackets = '[' + col + ']'
+                    for k, row in df_s.iterrows():
+                        unique_measurement.append({
+                            "observableId": f"{col}_observable",
+                            "preequilibrationConditionId": None,
+                            "simulationConditionId": f"model{j}_data{sim}",
+                            "measurement": row[col_brackets], # !
+                            MEASUREMENT_UNIT_COLUMN: "mmole/l",
+                            "time": row["time"], # !
+                            MEASUREMENT_TIME_UNIT_COLUMN: "second",
+                            "observableParameters": None,
+                            "noiseParameters": None,
+                        })
+
+                measurement_sim_df = pd.DataFrame(unique_measurement)
+
+                measurement_pop.append(measurement_sim_df)
+
+            measurement_df = pd.concat(measurement_pop)
+            measurement_ls.append(measurement_df)
+
+        parameters: List[str] = list(self.samples[0].keys())
 
         for par in parameters:
             parameter_ls.append({
@@ -308,7 +316,7 @@ if __name__ == "__main__":
     console.print(synth_dset)
 
     # convert to PeTab problem
-    # ode_sim.to_petab(synth_dset)
+    ode_sim.to_petab(synth_dset)
 
 
     # 1. define distributions (multi-var log normal)
