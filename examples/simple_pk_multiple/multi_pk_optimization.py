@@ -76,23 +76,23 @@ fig_path: Path = Path(__file__).parent / "results"
 
 # 3. Evaluate model fit ------------------------------------
 console.rule('3. Evaluate Model Fit', style='white')
-ax = model_fit.visualize_optimized_model_fit(
-    petab_problem=petab_problem, result=result, pypesto_problem=problem
-)
-plt.show()
-pypesto.visualize.waterfall(result)
-plt.savefig(str(fig_path) + '/01_model-fit_waterfall.png')
+# ax = model_fit.visualize_optimized_model_fit(
+#     petab_problem=petab_problem, result=result, pypesto_problem=problem
+# )
+# plt.show()
+# pypesto.visualize.waterfall(result)
+# plt.savefig(str(fig_path) + '/01_model-fit_waterfall.png')
 #
-pypesto.visualize.parameters(result)
-plt.savefig(str(fig_path) + '/02_model-fit_parameters.png')
+# pypesto.visualize.parameters(result)
+# plt.savefig(str(fig_path) + '/02_model-fit_parameters.png')
 
 # pypesto.visualize.parameters_correlation_matrix(result)
-console.rule("Parameter_hist", style="white")
+# console.rule("Parameter_hist", style="white")
 # pypesto.visualize.parameter_hist(result=result, parameter_name="kabs")
 # plt.savefig(str(fig_path) + '/03_parameters_hist.png')
 
-pypesto.visualize.optimization_scatter(result)
-plt.savefig(str(fig_path) + '/04_model-fit_opt_scatter.png')
+# pypesto.visualize.optimization_scatter(result)
+# plt.savefig(str(fig_path) + '/04_model-fit_opt_scatter.png')
 
 
 # 4. Determine Parameter Uncertainty ----------------------------
@@ -130,15 +130,18 @@ plt.tight_layout()
 plt.savefig(str(fig_path) + '/06_param-uncert_sampling_fval_traces.png')
 
 pypesto.visualize.sampling_parameter_traces(
-    result, use_problem_bounds=False, size=(12, 5)
+    result, use_problem_bounds=False, size=(12, 5), stepsize=10
 )
 plt.savefig(str(fig_path) + '/07_param-uncert_traces.png')
 
-pypesto.visualize.sampling_parameter_cis(result, alpha=[99, 95, 90], size=(10, 5))
-plt.savefig(str(fig_path) + '/08_param-uncert_cis.png')
+pypesto.visualize.sampling_scatter(result, stepsize=10, show_bounds=False)
+plt.savefig(str(fig_path) + '/08_param-scatter.png')
 
-pypesto.visualize.sampling_1d_marginals(result)
-plt.savefig(str(fig_path) + '/09_param-uncert_marginals.png')
+pypesto.visualize.sampling_parameter_cis(result, alpha=[99, 95, 90], size=(10, 5))
+plt.savefig(str(fig_path) + '/09_param-uncert_cis.png')
+
+pypesto.visualize.sampling_1d_marginals(result, stepsize=10, plot_type='both')
+plt.savefig(str(fig_path) + '/10_param-uncert_marginals.png')
 plt.show()
 
 
@@ -148,4 +151,85 @@ console.rule('5. Prediction Uncertainty', style='white')
 
 # 6. Model Selection
 # https://github.com/PEtab-dev/petab_select
+
+
+# from pypesto.petab.importer import PetabImporter
+# from petab import Problem
+# from pypesto import optimize, sample, HistoryOptions, engine, startpoint
+#
+# class PyPestoWorkflow:
+#
+#     def __init__(self, petab_yaml: Path):
+#         self.petab_yaml = petab_yaml
+#
+#         self.importer = None
+#         self.result = None
+#
+#     def create_problem(
+#         self,
+#         verbose: bool = True,
+#         check: bool = False
+#     ) -> pypesto.problem.base.Problem:
+#         petab_problem = Problem.from_yaml(self.petab_yaml)
+#         self.importer: PetabImporter = PetabImporter(petab_problem)
+#         problem = importer.create_problem(verbose=verbose)
+#
+#         if check:
+#             # check tbe observables df
+#             console.rule("observables", style="white")
+#             console.print(petab_problem.observable_df)
+#
+#             # Check the measurement dataframe
+#             console.rule("measurements", style="white")
+#             console.print(petab_problem.measurement_df)
+#
+#             # check the condition dataframe
+#             console.rule("conditions", style="white")
+#             console.print(petab_problem.condition_df)
+#
+#         return problem
+#
+#     def optimize(self, problem: pypesto.problem.base.Problem):
+#         objective = self.importer.create_objective()
+#
+#         objective.amici_solver.setAbsoluteTolerance(1e-15)
+#
+#         console.print(objective.amici_model.requireSensitivitiesForAllParameters())
+#
+#         optimizer_options = {"maxiter": 1e4, "fatol": 1e-12, "frtol": 1e-12}
+#         optimizer = optimize.FidesOptimizer(
+#             options=optimizer_options, verbose=logging.WARN
+#         )
+#
+#         history_options = HistoryOptions(trace_record=True)
+#         opt_options = optimize.OptimizeOptions()
+#
+#         sampler = sample.AdaptiveMetropolisSampler()
+#
+#         n_starts = 100  # usually a value >= 100 should be used
+#         engine = engine.MultiProcessEngine()
+#         startpoint_method = startpoint.uniform
+#
+#         self.result = optimize.minimize(
+#             problem=problem,
+#             optimizer=optimizer,
+#             n_starts=n_starts,
+#             startpoint_method=startpoint_method,
+#             engine=engine,
+#             options=opt_options,
+#         )
+#
+#         self.result = sample.sample(
+#             problem=problem,
+#             sampler=sampler,
+#             n_samples=10000,
+#             result=self.result,
+#         )
+#
+#         burn = sample.geweke_test(self.result)  # cutting burin-in samples
+#         # at least first 100 samples are cut for burn in
+#         if burn < 100:
+#             self.result.sample_result.burn_in = 100
+
+
 
